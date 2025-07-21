@@ -1,0 +1,164 @@
+# PyPerf Viewer
+
+A Django web dashboard for visualizing and analyzing performance data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) library.
+
+## Features
+
+- **Performance Overview**: Dashboard showing key metrics and trends
+- **Function Analysis**: Detailed analysis of individual function performance
+- **Record Browser**: Browse and filter performance records
+- **REST API**: Programmatic access to performance data
+- **Real-time Data**: Automatically displays latest performance data from DynamoDB or local storage
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate     # On Windows
+
+# Install requirements
+pip install -r requirements.txt
+
+# For development
+pip install -r requirements-dev.txt
+```
+
+### 2. Configure PyPerf
+
+Create a `.py-perf.yaml` configuration file in the project root:
+
+```yaml
+py_perf:
+  enabled: true
+
+# For local development (no AWS required)
+local:
+  enabled: true
+  data_dir: "./perf_data"
+  format: "json"
+
+# For production with AWS DynamoDB
+# aws:
+#   region: "us-east-1"
+#   table_name: "py-perf-data"
+```
+
+### 3. Start the Dashboard
+
+```bash
+# Apply Django migrations
+python manage.py migrate
+
+# Start the development server
+python manage.py runserver 8000
+```
+
+Visit http://localhost:8000 to view the performance dashboard.
+
+## Integration with PyPerf Core Library
+
+This dashboard works with data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) core library:
+
+```python
+from py_perf import PyPerf
+
+# Initialize performance tracking
+perf = PyPerf()
+
+@perf.time_it
+def my_function():
+    # Your application code
+    pass
+
+# Data is automatically collected and can be viewed in this dashboard
+```
+
+## Project Structure
+
+```
+py-perf-viewer/
+├── pyperfweb/              # Django project
+│   ├── dashboard/          # Main dashboard app
+│   │   ├── views.py       # Dashboard views
+│   │   ├── models.py      # Data models
+│   │   ├── services.py    # DynamoDB service
+│   │   ├── templates/     # HTML templates
+│   │   └── tests.py       # Unit tests
+│   ├── settings.py        # Django settings
+│   └── urls.py            # URL configuration
+├── manage.py              # Django management
+├── requirements.txt       # Production dependencies
+└── requirements-dev.txt   # Development dependencies
+```
+
+## Development
+
+### Running Tests
+
+```bash
+# Unit tests (offline, with mocked dependencies)
+python manage.py test pyperfweb.dashboard.tests
+
+# Integration tests (requires running Django server)
+python test_django_server.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black pyperfweb/
+isort pyperfweb/
+
+# Lint code  
+flake8 pyperfweb/
+mypy pyperfweb/
+```
+
+## Configuration
+
+The dashboard uses the same configuration system as the core py-perf library. See the [py-perf documentation](https://github.com/jeremycharlesgillespie/py-perf) for detailed configuration options.
+
+## API Endpoints
+
+- `GET /api/metrics/` - Performance metrics summary
+- `GET /api/hostnames/` - List of unique hostnames
+- `GET /api/functions/` - List of unique function names
+- `GET /records/` - Browse performance records
+- `GET /functions/{name}/` - Function-specific analysis
+
+## Deployment
+
+### Docker (Recommended)
+
+```bash
+# Build Docker image
+docker build -t py-perf-viewer .
+
+# Run with environment variables
+docker run -p 8000:8000 \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  -e DYNAMODB_TABLE_NAME=py-perf-data \
+  py-perf-viewer
+```
+
+### Traditional Deployment
+
+1. Set up a production WSGI server (gunicorn, uWSGI)
+2. Configure static file serving
+3. Set up database (if using Django models)
+4. Configure environment variables for AWS access
+
+## Related Projects
+
+- **[py-perf](https://pypi.org/project/py-perf-jg/)** - Core performance tracking library
+- **[py-perf GitHub](https://github.com/jeremycharlesgillespie/py-perf)** - Core library source code
+
+## License
+
+MIT License - see LICENSE file for details.

@@ -1,0 +1,28 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Function Not Found - PyPerf Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-code fa-3x text-muted mb-3"></i>
+                    <h4>Function Not Found</h4>
+                    <p class="text-muted">No performance records found for function: <code>{{ function_name }}</code></p>
+                    <p class="text-muted">This function may not have been profiled yet, or the function name might be incorrect.</p>
+                    <div class="mt-3">
+                        <a href="{% url 'dashboard:records' %}" class="btn btn-primary">
+                            <i class="fas fa-table"></i> Browse All Records
+                        </a>
+                        <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-home"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-perf-viewer"
+version = "0.1.0"
+authors = [
+    {name = "Jeremy Gillespie", email = "metalgear386@googlemail.com"},
+]
+description = "Django web dashboard for visualizing py-perf performance data"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+keywords = ["performance", "monitoring", "django", "dashboard", "visualization"]
+dependencies = [
+    "py-perf-jg>=0.1.0",
+    "Django>=4.2.0",
+    "djangorestframework>=3.14.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "factory-boy>=3.2.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/jeremycharlesgillespie/py-perf-viewer"
+"Bug Reports" = "https://github.com/jeremycharlesgillespie/py-perf-viewer/issues"
+"Source" = "https://github.com/jeremycharlesgillespie/py-perf-viewer"
+"Core Library" = "https://github.com/jeremycharlesgillespie/py-perf"
+
+[tool.setuptools]
+packages = ["pyperfweb", "pyperfweb.dashboard"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"pyperfweb.dashboard" = ["templates/**/*.html", "static/**/*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+known_django = ["django"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "pyperfweb.settings"
+testpaths = ["pyperfweb"]
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--tb=short"

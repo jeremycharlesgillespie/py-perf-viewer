@@ -1,0 +1,250 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}PyPerf Dashboard - Home{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">
+        <i class="fas fa-tachometer-alt"></i> Performance Dashboard
+    </h1>
+
+    <!-- Key Metrics -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h5><i class="fas fa-database"></i> Total Records</h5>
+                <h2>{{ metrics.total_records }}</h2>
+                <small>Performance sessions tracked</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h5><i class="fas fa-users"></i> Active Sessions</h5>
+                <h2>{{ metrics.total_sessions }}</h2>
+                <small>Unique application sessions</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h5><i class="fas fa-server"></i> Hosts</h5>
+                <h2>{{ metrics.unique_hostnames|length }}</h2>
+                <small>Different machines monitored</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <h5><i class="fas fa-code"></i> Functions</h5>
+                <h2>{{ metrics.unique_functions|length }}</h2>
+                <small>Tracked function types</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Slowest Functions -->
+        <div class="col-md-6">
+            <div class="card performance-table">
+                <div class="card-header">
+                    <h5><i class="fas fa-exclamation-triangle text-warning"></i> Slowest Functions</h5>
+                </div>
+                <div class="card-body">
+                    {% if metrics.slowest_functions_global %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Function</th>
+                                        <th>Avg Time (s)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for func_name, avg_time in metrics.slowest_functions_global|slice:":5" %}
+                                    <tr>
+                                        <td>
+                                            <span class="function-badge {% if avg_time > 0.1 %}slow-function{% endif %}">
+                                                {{ func_name }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="time-display">{{ avg_time|floatformat:4 }}</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'dashboard:function_analysis' func_name %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-search"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No function data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Most Active Hosts -->
+        <div class="col-md-6">
+            <div class="card performance-table">
+                <div class="card-header">
+                    <h5><i class="fas fa-server text-info"></i> Most Active Hosts</h5>
+                </div>
+                <div class="card-body">
+                    {% if metrics.most_active_hosts %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Hostname</th>
+                                        <th>Total Calls</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hostname, calls in metrics.most_active_hosts|slice:":5" %}
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-desktop"></i> {{ hostname }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ calls }}</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'dashboard:records' %}?hostname={{ hostname }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-filter"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No host data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Performance Records -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card performance-table">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-clock text-success"></i> Recent Performance Records (Last 24h)</h5>
+                    <a href="{% url 'dashboard:records' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list"></i> View All Records
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_records %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Hostname</th>
+                                        <th>Functions</th>
+                                        <th>Total Calls</th>
+                                        <th>Wall Time</th>
+                                        <th>CPU Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in recent_records %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ record.datetime|date:"M d, H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-desktop"></i> {{ record.hostname }}
+                                        </td>
+                                        <td>
+                                            {% for func in record.function_names|slice:":3" %}
+                                                <span class="function-badge">{{ func }}</span>
+                                            {% endfor %}
+                                            {% if record.function_names|length > 3 %}
+                                                <span class="text-muted">+{{ record.function_names|length|add:"-3" }} more</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ record.total_calls }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="time-display">{{ record.total_wall_time|floatformat:3 }}s</span>
+                                        </td>
+                                        <td>
+                                            <span class="time-display">{{ record.total_cpu_time|floatformat:3 }}s</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'dashboard:record_detail' record.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No performance data available</h5>
+                            <p class="text-muted">Start using PyPerf decorators in your code to see performance metrics here.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{% url 'dashboard:records' %}" class="btn btn-outline-primary btn-lg w-100 mb-2">
+                                <i class="fas fa-table"></i><br>
+                                Browse All Records
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'dashboard:records' %}?start_date={{ 'now'|date:'Y-m-d' }}" class="btn btn-outline-success btn-lg w-100 mb-2">
+                                <i class="fas fa-calendar-day"></i><br>
+                                Today's Performance
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-info btn-lg w-100 mb-2" onclick="refreshData()">
+                                <i class="fas fa-sync-alt"></i><br>
+                                Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshData() {
+    location.reload();
+}
+
+// Auto-refresh every 5 minutes
+setInterval(refreshData, 300000);
+</script>
+{% endblock %}

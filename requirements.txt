@@ -1,0 +1,11 @@
+# Django web dashboard for py-perf performance data visualization
+
+# Core performance library
+py-perf-jg>=0.1.0  # Our core library from PyPI
+
+# Django web framework dependencies
+Django>=4.2.0
+djangorestframework>=3.14.0
+
+# Development dependencies (optional)
+# Install with: pip install -r requirements-dev.txt

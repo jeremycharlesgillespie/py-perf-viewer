@@ -1,0 +1,194 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Performance Records - PyPerf Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">
+        <i class="fas fa-table"></i> Performance Records
+        <span class="badge bg-info">{{ total_records }} records</span>
+    </h1>
+
+    <!-- Filters -->
+    <div class="filter-form">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="hostname" class="form-label">Hostname</label>
+                <select name="hostname" id="hostname" class="form-select">
+                    <option value="">All Hosts</option>
+                    {% for hostname in hostnames %}
+                        <option value="{{ hostname }}" {% if current_filters.hostname == hostname %}selected{% endif %}>
+                            {{ hostname }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="function_name" class="form-label">Function</label>
+                <select name="function_name" id="function_name" class="form-select">
+                    <option value="">All Functions</option>
+                    {% for func in function_names %}
+                        <option value="{{ func }}" {% if current_filters.function_name == func %}selected{% endif %}>
+                            {{ func }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" 
+                       value="{{ current_filters.start_date }}">
+            </div>
+            <div class="col-md-2">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" 
+                       value="{{ current_filters.end_date }}">
+            </div>
+            <div class="col-md-2">
+                <label for="sort_by" class="form-label">Sort By</label>
+                <select name="sort_by" id="sort_by" class="form-select">
+                    <option value="timestamp" {% if current_filters.sort_by == "timestamp" %}selected{% endif %}>Timestamp</option>
+                    <option value="hostname" {% if current_filters.sort_by == "hostname" %}selected{% endif %}>Hostname</option>
+                    <option value="total_calls" {% if current_filters.sort_by == "total_calls" %}selected{% endif %}>Total Calls</option>
+                    <option value="total_wall_time" {% if current_filters.sort_by == "total_wall_time" %}selected{% endif %}>Wall Time</option>
+                    <option value="avg_wall_time" {% if current_filters.sort_by == "avg_wall_time" %}selected{% endif %}>Avg Wall Time</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="{% url 'dashboard:records' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card performance-table">
+        <div class="card-body">
+            {% if records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <a href="?{% for k, v in current_filters.items %}{% if k != 'sort_by' and k != 'order' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort_by=timestamp&order={% if current_filters.sort_by == 'timestamp' and current_filters.order == 'desc' %}asc{% else %}desc{% endif %}">
+                                        Timestamp
+                                        {% if current_filters.sort_by == 'timestamp' %}
+                                            <i class="fas fa-sort-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% for k, v in current_filters.items %}{% if k != 'sort_by' and k != 'order' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort_by=hostname&order={% if current_filters.sort_by == 'hostname' and current_filters.order == 'desc' %}asc{% else %}desc{% endif %}">
+                                        Hostname
+                                        {% if current_filters.sort_by == 'hostname' %}
+                                            <i class="fas fa-sort-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>Functions</th>
+                                <th>
+                                    <a href="?{% for k, v in current_filters.items %}{% if k != 'sort_by' and k != 'order' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort_by=total_calls&order={% if current_filters.sort_by == 'total_calls' and current_filters.order == 'desc' %}asc{% else %}desc{% endif %}">
+                                        Total Calls
+                                        {% if current_filters.sort_by == 'total_calls' %}
+                                            <i class="fas fa-sort-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% for k, v in current_filters.items %}{% if k != 'sort_by' and k != 'order' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort_by=total_wall_time&order={% if current_filters.sort_by == 'total_wall_time' and current_filters.order == 'desc' %}asc{% else %}desc{% endif %}">
+                                        Wall Time
+                                        {% if current_filters.sort_by == 'total_wall_time' %}
+                                            <i class="fas fa-sort-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>CPU Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td>
+                                    <small>{{ record.datetime|date:"M d, Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    <i class="fas fa-desktop"></i> {{ record.hostname }}
+                                </td>
+                                <td>
+                                    {% for func in record.function_names|slice:":2" %}
+                                        <a href="{% url 'dashboard:function_analysis' func %}" class="function-badge text-decoration-none">
+                                            {{ func }}
+                                        </a>
+                                    {% endfor %}
+                                    {% if record.function_names|length > 2 %}
+                                        <span class="text-muted">+{{ record.function_names|length|add:"-2" }} more</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ record.total_calls }}</span>
+                                </td>
+                                <td>
+                                    <span class="time-display {% if record.total_wall_time > 1 %}text-warning{% elif record.total_wall_time > 5 %}text-danger{% endif %}">
+                                        {{ record.total_wall_time|floatformat:3 }}s
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="time-display">{{ record.total_cpu_time|floatformat:3 }}s</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:record_detail' record.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if records.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if records.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for k, v in current_filters.items %}{% if k != 'page' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ records.previous_page_number }}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in records.paginator.page_range %}
+                            {% if records.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > records.number|add:'-3' and num < records.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for k, v in current_filters.items %}{% if k != 'page' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if records.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for k, v in current_filters.items %}{% if k != 'page' and v %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ records.next_page_number }}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No records found</h5>
+                    <p class="text-muted">Try adjusting your filters or check if PyPerf is running on your applications.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

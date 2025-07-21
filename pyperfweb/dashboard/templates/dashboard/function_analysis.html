@@ -1,0 +1,132 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ function_name }} Analysis - PyPerf Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">
+        <i class="fas fa-code"></i> Function Analysis: <code>{{ function_name }}</code>
+    </h1>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Records</h5>
+                    <h3 class="text-primary">{{ total_records }}</h3>
+                    <small class="text-muted">Records containing this function</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Calls</h5>
+                    <h3 class="text-info">{{ total_calls }}</h3>
+                    <small class="text-muted">Across all records</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Average Wall Time</h5>
+                    <h3 class="text-warning">{{ avg_wall_time|floatformat:4 }}s</h3>
+                    <small class="text-muted">Per call</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Wall Time</h5>
+                    <h3 class="text-danger">{{ total_wall_time|floatformat:3 }}s</h3>
+                    <small class="text-muted">All calls combined</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Function Performance by Record -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line"></i> Performance by Record
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if function_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Record</th>
+                                <th>Hostname</th>
+                                <th>Timestamp</th>
+                                <th>Calls</th>
+                                <th>Avg Wall Time</th>
+                                <th>Total Wall Time</th>
+                                <th>Avg CPU Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in function_stats %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">{{ stat.record.id|slice:":8" }}...</small>
+                                </td>
+                                <td>
+                                    <i class="fas fa-desktop"></i> {{ stat.record.hostname }}
+                                </td>
+                                <td>
+                                    <small>{{ stat.record.datetime|date:"M d, Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ stat.calls }}</span>
+                                </td>
+                                <td>
+                                    <span class="time-display {% if stat.avg_wall_time > 0.1 %}text-warning{% elif stat.avg_wall_time > 0.5 %}text-danger{% endif %}">
+                                        {{ stat.avg_wall_time|floatformat:4 }}s
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="time-display {% if stat.total_wall_time > 1 %}text-warning{% elif stat.total_wall_time > 5 %}text-danger{% endif %}">
+                                        {{ stat.total_wall_time|floatformat:3 }}s
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="time-display">{{ stat.avg_cpu_time|floatformat:4 }}s</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:record_detail' stat.record.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View Record
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-code fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No performance data found</h5>
+                    <p class="text-muted">This function hasn't been profiled yet or no records contain performance data for it.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="mt-4">
+        <a href="{% url 'dashboard:records' %}?function_name={{ function_name }}" class="btn btn-secondary">
+            <i class="fas fa-filter"></i> View All Records with this Function
+        </a>
+        <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
