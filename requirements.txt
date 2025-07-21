@@ -2,7 +2,7 @@
 
 # Core performance library
 py-perf-jg>=0.1.0  # Our core library from PyPI
-
+boto3
 # Django web framework dependencies
 Django>=4.2.0
 djangorestframework>=3.14.0
