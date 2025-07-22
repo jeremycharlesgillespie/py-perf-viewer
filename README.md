@@ -2,62 +2,6 @@
 
 A Django web dashboard for visualizing and analyzing performance data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) library.
 
-## Features
-
-- **Performance Overview**: Dashboard showing key metrics and trends
-- **Function Analysis**: Detailed analysis of individual function performance
-- **Record Browser**: Browse and filter performance records
-- **REST API**: Programmatic access to performance data
-- **Real-time Data**: Automatically displays latest performance data from DynamoDB or local storage
-
-## Quick Start
-
-### 1. Install Dependencies
-
-```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On macOS/Linux
-# or
-venv\Scripts\activate     # On Windows
-
-# Install requirements
-pip install -r requirements.txt
-
-# For development
-pip install -r requirements-dev.txt
-```
-
-### 2. Configure PyPerf
-
-Create a `.py-perf.yaml` configuration file in the project root:
-
-```yaml
-py_perf:
-  enabled: true
-
-# For local development (no AWS required)
-local:
-  enabled: true
-  data_dir: "./perf_data"
-  format: "json"
-
-# For production with AWS DynamoDB
-# aws:
-#   region: "us-east-1"
-#   table_name: "py-perf-data"
-```
-
-### 3. Start the Dashboard
-
-```bash
-./start_viewer.py
-```
-
-Visit http://localhost:8000 to view the performance dashboard.
-
-## Screenshots
-
 Here's what you can expect when running the py-perf-viewer dashboard:
 
 ### Main Dashboard Home
@@ -132,6 +76,60 @@ The dashboard also provides JSON API endpoints for programmatic access:
     ]
 }
 ```
+
+## Features
+
+- **Performance Overview**: Dashboard showing key metrics and trends
+- **Function Analysis**: Detailed analysis of individual function performance
+- **Record Browser**: Browse and filter performance records
+- **REST API**: Programmatic access to performance data
+- **Real-time Data**: Automatically displays latest performance data from DynamoDB or local storage
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate     # On Windows
+
+# Install requirements
+pip install -r requirements.txt
+
+# For development
+pip install -r requirements-dev.txt
+```
+
+### 2. Configure PyPerf
+
+Create a `.py-perf.yaml` configuration file in the project root:
+
+```yaml
+py_perf:
+  enabled: true
+
+# For local development (no AWS required)
+local:
+  enabled: true
+  data_dir: "./perf_data"
+  format: "json"
+
+# For production with AWS DynamoDB
+# aws:
+#   region: "us-east-1"
+#   table_name: "py-perf-data"
+```
+
+### 3. Start the Dashboard
+
+```bash
+./start_viewer.py
+```
+
+Visit http://localhost:8000 to view the performance dashboard.
 
 ## Integration with PyPerf Core Library
 
