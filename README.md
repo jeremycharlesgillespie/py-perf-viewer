@@ -4,21 +4,27 @@ A Django web dashboard for visualizing and analyzing performance data collected 
 
 Here's what you can expect when running the py-perf-viewer dashboard:
 
-### Main Dashboard Home
-![Main Dashboard](screenshots/01_dashboard_home.png)
-*Overview of performance metrics with key statistics and recent activity*
+### Main Dashboard Home (Dark Mode - Default)
+![Main Dashboard Dark](screenshots/dark_dashboard_home.png)
+*Overview of performance metrics with key statistics and recent activity - Dark mode provides a modern, eye-friendly experience*
 
-### Performance Records List
-![Performance Records](screenshots/02_performance_records.png)
-*Paginated list of all performance records with filtering and sorting capabilities*
+### Performance Records List (Light Mode)
+![Performance Records Light](screenshots/light_performance_records.png)
+*Paginated list of all performance records with filtering and sorting capabilities - Light mode offers a clean, professional appearance*
 
-### Individual Record Detail
-![Record Detail](screenshots/03_record_detail.png)
-*Detailed view of a specific performance record showing function-level breakdown*
+### Individual Record Detail (Dark Mode)
+![Record Detail Dark](screenshots/dark_record_detail.png)
+*Detailed view of a specific performance record showing function-level breakdown with dark theme*
 
-### Function Analysis View
-![Function Analysis](screenshots/04_function_analysis.png)
-*Cross-record analysis of specific functions with performance trends over time*
+### Function Analysis View (Light Mode)
+![Function Analysis Light](screenshots/light_function_analysis.png)
+*Cross-record analysis of specific functions with performance trends over time in light mode*
+
+### Theme Toggle
+The dashboard includes a convenient dark/light mode toggle in the top-right navigation:
+- **🌙 Default**: Starts in dark mode with modern styling
+- **💡 Toggle**: Click to switch between themes instantly  
+- **💾 Persistent**: Your theme preference is saved across sessions
 
 ### REST API Endpoints
 
