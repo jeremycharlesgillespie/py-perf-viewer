@@ -51,6 +51,11 @@ def main():
     if not run_command("python manage.py migrate", "Applying database migrations"):
         print("⚠️  Warning: Migrations failed. Continuing anyway...")
     
+    # Collect static files
+    print("\n📁 Collecting static files...")
+    if not run_command("python manage.py collectstatic --noinput", "Collecting static files"):
+        print("⚠️  Warning: Static file collection failed. Continuing anyway...")
+    
     # Check for py-perf configuration
     config_files = [
         Path(".py-perf.yaml"),

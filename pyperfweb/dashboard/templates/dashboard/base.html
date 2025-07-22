@@ -4,9 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PyPerf Dashboard{% endblock %}</title>
+    
+    <!-- Favicon -->
+    {% load static %}
+    <link rel="icon" type="image/svg+xml" href="{% static 'dashboard/favicon.svg' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'dashboard/favicon.ico' %}">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* CSS Variables for Dark Mode */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --sidebar-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --filter-bg: #f8f9fa;
+            --badge-bg: #e9ecef;
+            --badge-text: #495057;
+            --table-bg: #ffffff;
+            --table-hover: #f5f5f5;
+            --navbar-bg: #0d6efd;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e9ecef;
+            --card-bg: #2d2d2d;
+            --sidebar-bg: #212529;
+            --border-color: #495057;
+            --filter-bg: #343a40;
+            --badge-bg: #495057;
+            --badge-text: #e9ecef;
+            --table-bg: #2d2d2d;
+            --table-hover: #3d3d3d;
+            --navbar-bg: #1a1a1a;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
+        /* Apply CSS variables */
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .metric-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -14,44 +58,180 @@
             padding: 20px;
             margin-bottom: 20px;
         }
+
         .performance-table {
-            background: white;
+            background: var(--table-bg);
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px var(--shadow);
+            border: 1px solid var(--border-color);
         }
+
+        .table {
+            background: var(--table-bg);
+            color: var(--text-color);
+        }
+
+        .table th,
+        .table td {
+            border-color: var(--border-color);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: var(--table-hover);
+        }
+
         .navbar-brand {
             font-weight: bold;
         }
+
         .sidebar {
             min-height: 100vh;
-            background-color: #f8f9fa;
+            background-color: var(--sidebar-bg);
         }
+
         .function-badge {
-            background-color: #e9ecef;
-            color: #495057;
+            background-color: var(--badge-bg);
+            color: var(--badge-text);
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 0.8em;
             margin: 2px;
             display: inline-block;
         }
+
         .slow-function {
             background-color: #dc3545;
             color: white;
         }
+
         .fast-function {
             background-color: #28a745;
             color: white;
         }
+
         .time-display {
             font-family: 'Courier New', monospace;
             font-weight: bold;
         }
+
         .filter-form {
-            background: #f8f9fa;
+            background: var(--filter-bg);
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: var(--card-bg);
+            border-color: #667eea;
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dark-mode-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .dark-mode-toggle i {
+            transition: transform 0.3s ease;
+        }
+
+        /* Navbar dark mode styling */
+        [data-theme="dark"] .navbar-dark {
+            background-color: var(--navbar-bg) !important;
+        }
+
+        /* Pagination styling */
+        .page-link {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .page-link:hover {
+            background-color: var(--table-hover);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .page-item.active .page-link {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        /* Additional dark mode styles for badges and buttons */
+        .badge {
+            color: white !important;
+        }
+
+        .btn-outline-primary {
+            color: #667eea;
+            border-color: #667eea;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        [data-theme="dark"] .btn-outline-primary {
+            color: #8fa5ff;
+            border-color: #8fa5ff;
+        }
+
+        [data-theme="dark"] .btn-outline-primary:hover {
+            background-color: #8fa5ff;
+            border-color: #8fa5ff;
+            color: #1a1a1a;
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: #adb5bd !important;
+        }
+
+        /* Card header styling */
+        .card-header {
+            background-color: var(--filter-bg);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
         }
     </style>
 </head>
@@ -76,6 +256,11 @@
                             <i class="fas fa-table"></i> Performance Records
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <button class="dark-mode-toggle" id="darkModeToggle" title="Switch to Light Mode">
+                            <i class="fas fa-lightbulb" id="darkModeIcon"></i>
+                        </button>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -92,6 +277,57 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Dark Mode Toggle JavaScript -->
+    <script>
+        // Dark mode functionality
+        class DarkModeToggle {
+            constructor() {
+                this.toggle = document.getElementById('darkModeToggle');
+                this.icon = document.getElementById('darkModeIcon');
+                this.init();
+            }
+            
+            init() {
+                // Load saved theme preference or default to dark mode
+                const savedTheme = localStorage.getItem('theme') || 'dark';
+                this.setTheme(savedTheme);
+                
+                // Add click event listener
+                this.toggle.addEventListener('click', () => {
+                    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    this.setTheme(newTheme);
+                });
+            }
+            
+            setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                this.updateIcon(theme);
+            }
+            
+            updateIcon(theme) {
+                if (theme === 'dark') {
+                    // Remove all possible classes first
+                    this.icon.classList.remove('fa-moon', 'fa-lightbulb', 'fa-gear', 'fa-cog', 'fa-sun', 'fa-sun-o');
+                    this.icon.classList.add('fa-lightbulb');
+                    this.toggle.title = 'Switch to Light Mode';
+                } else {
+                    // Remove all possible classes first
+                    this.icon.classList.remove('fa-lightbulb', 'fa-moon', 'fa-gear', 'fa-cog', 'fa-sun', 'fa-sun-o');
+                    this.icon.classList.add('fa-moon');
+                    this.toggle.title = 'Switch to Dark Mode';
+                }
+            }
+        }
+        
+        // Initialize dark mode toggle when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            new DarkModeToggle();
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
