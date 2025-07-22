@@ -51,11 +51,7 @@ local:
 ### 3. Start the Dashboard
 
 ```bash
-# Apply Django migrations
-python manage.py migrate
-
-# Start the development server
-python manage.py runserver 8000
+./start_viewer.py
 ```
 
 Visit http://localhost:8000 to view the performance dashboard.
@@ -85,16 +81,57 @@ Here's what you can expect when running the py-perf-viewer dashboard:
 The dashboard also provides JSON API endpoints for programmatic access:
 
 #### Performance Metrics API
-![API Metrics](screenshots/05_api_metrics.png)
-*`GET /api/metrics/` - Summary performance metrics in JSON format*
+`GET /api/metrics/` - Summary performance metrics in JSON format
+
+```json
+{
+    "total_records": 2,
+    "total_sessions": 2,
+    "unique_hostnames": ["Mac.home.local"],
+    "unique_functions": [
+        "slow_io_operation",
+        "cpu_intensive_task", 
+        "check_aws_credentials",
+        "mixed_workload",
+        "fast_calculation",
+        "variable_duration"
+    ],
+    "avg_session_duration": 0.0,
+    "slowest_functions": [
+        ["check_aws_credentials", 0.294],
+        ["slow_io_operation", 0.105],
+        ["mixed_workload", 0.055]
+    ],
+    "most_active_hosts": [
+        ["Mac.home.local", 14]
+    ]
+}
+```
 
 #### Hostnames API
-![API Hostnames](screenshots/06_api_hostnames.png)
-*`GET /api/hostnames/` - List of unique hostnames for filtering*
+`GET /api/hostnames/` - List of unique hostnames for filtering
+
+```json
+{
+    "hostnames": ["Mac.home.local"]
+}
+```
 
 #### Functions API
-![API Functions](screenshots/07_api_functions.png)
-*`GET /api/functions/` - List of unique function names for analysis*
+`GET /api/functions/` - List of unique function names for analysis
+
+```json
+{
+    "functions": [
+        "check_aws_credentials",
+        "cpu_intensive_task",
+        "fast_calculation",
+        "mixed_workload", 
+        "slow_io_operation",
+        "variable_duration"
+    ]
+}
+```
 
 ## Integration with PyPerf Core Library
 
