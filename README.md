@@ -60,6 +60,42 @@ python manage.py runserver 8000
 
 Visit http://localhost:8000 to view the performance dashboard.
 
+## Screenshots
+
+Here's what you can expect when running the py-perf-viewer dashboard:
+
+### Main Dashboard Home
+![Main Dashboard](screenshots/01_dashboard_home.png)
+*Overview of performance metrics with key statistics and recent activity*
+
+### Performance Records List
+![Performance Records](screenshots/02_performance_records.png)
+*Paginated list of all performance records with filtering and sorting capabilities*
+
+### Individual Record Detail
+![Record Detail](screenshots/03_record_detail.png)
+*Detailed view of a specific performance record showing function-level breakdown*
+
+### Function Analysis View
+![Function Analysis](screenshots/04_function_analysis.png)
+*Cross-record analysis of specific functions with performance trends over time*
+
+### REST API Endpoints
+
+The dashboard also provides JSON API endpoints for programmatic access:
+
+#### Performance Metrics API
+![API Metrics](screenshots/05_api_metrics.png)
+*`GET /api/metrics/` - Summary performance metrics in JSON format*
+
+#### Hostnames API
+![API Hostnames](screenshots/06_api_hostnames.png)
+*`GET /api/hostnames/` - List of unique hostnames for filtering*
+
+#### Functions API
+![API Functions](screenshots/07_api_functions.png)
+*`GET /api/functions/` - List of unique function names for analysis*
+
 ## Integration with PyPerf Core Library
 
 This dashboard works with data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) core library:
