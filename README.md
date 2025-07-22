@@ -174,7 +174,10 @@ py-perf-viewer/
 ### Running Tests
 
 ```bash
-# Unit tests (offline, with mocked dependencies)
+# Unit tests (quiet mode, recommended)
+python manage.py test pyperfweb.dashboard.tests --settings=pyperfweb.test_settings
+
+# Unit tests (verbose mode, for debugging)
 python manage.py test pyperfweb.dashboard.tests
 
 # Integration tests (requires running Django server)

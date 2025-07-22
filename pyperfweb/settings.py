@@ -27,8 +27,8 @@ try:
     # Load PyPerf configuration
     pyperf_config = get_config()
     
-    # Display configuration file information (only once)
-    if not _config_displayed:
+    # Display configuration file information (only once, and not during tests)
+    if not _config_displayed and not os.environ.get('PYPERFWEB_TESTING'):
         print("\n" + "="*60)
         print("🔧 PYPERFWEB SERVER CONFIGURATION")
         print("="*60)
@@ -211,4 +211,42 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.backends.DjangoFilterBackend'],
+}
+
+# Logging configuration
+import sys
+
+# Suppress verbose logging during tests
+_is_testing = os.environ.get('PYPERFWEB_TESTING') == '1'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING' if _is_testing else 'INFO',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR' if _is_testing else 'INFO',
+            'propagate': False,
+        },
+        'botocore': {
+            'handlers': ['console'],
+            'level': 'ERROR' if _is_testing else 'INFO',
+            'propagate': False,
+        },
+        'boto3': {
+            'handlers': ['console'],
+            'level': 'ERROR' if _is_testing else 'INFO',
+            'propagate': False,
+        },
+    },
 }
