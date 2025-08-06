@@ -1,0 +1,246 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}System Metrics - {{ hostname }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'dashboard:system_metrics' %}">System Metrics</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ hostname }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">System Metrics: {{ hostname }}</h1>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="card-title text-muted">Average CPU</h6>
+                    <h3 class="{% if system_metrics.avg_cpu < 50 %}text-success{% elif system_metrics.avg_cpu < 80 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ system_metrics.avg_cpu|floatformat:1 }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="card-title text-muted">Max CPU</h6>
+                    <h3 class="{% if system_metrics.max_cpu < 70 %}text-success{% elif system_metrics.max_cpu < 90 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ system_metrics.max_cpu|floatformat:1 }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="card-title text-muted">Average Memory</h6>
+                    <h3 class="{% if system_metrics.avg_memory < 60 %}text-success{% elif system_metrics.avg_memory < 80 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ system_metrics.avg_memory|floatformat:1 }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="card-title text-muted">Max Memory</h6>
+                    <h3 class="{% if system_metrics.max_memory < 70 %}text-success{% elif system_metrics.max_memory < 90 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ system_metrics.max_memory|floatformat:1 }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">CPU Usage Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="cpuChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Memory Usage Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="memoryChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Range Info -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Time Range:</strong> Last {{ hours }} hours</p>
+                    <p><strong>Total Records:</strong> {{ system_metrics.total_records }}</p>
+                </div>
+                <div class="col-md-6">
+                    {% if system_metrics.time_range %}
+                    <p><strong>Start Time:</strong> {{ system_metrics.time_range.start|date:"Y-m-d H:i:s" }}</p>
+                    <p><strong>End Time:</strong> {{ system_metrics.time_range.end|date:"Y-m-d H:i:s" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Range Filter -->
+    <div class="mt-4">
+        <form method="get" class="form-inline">
+            <input type="hidden" name="hostname" value="{{ hostname }}">
+            <label for="hours" class="mr-2">Time Range:</label>
+            <select name="hours" id="hours" class="form-control mr-2">
+                <option value="1" {% if hours == 1 %}selected{% endif %}>Last 1 hour</option>
+                <option value="6" {% if hours == 6 %}selected{% endif %}>Last 6 hours</option>
+                <option value="24" {% if hours == 24 %}selected{% endif %}>Last 24 hours</option>
+                <option value="48" {% if hours == 48 %}selected{% endif %}>Last 48 hours</option>
+                <option value="168" {% if hours == 168 %}selected{% endif %}>Last 7 days</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="{% url 'dashboard:system_metrics' %}" class="btn btn-secondary ml-2">Back to Overview</a>
+        </form>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Prepare timeline data
+const timelineData = {{ timeline_data|safe }};
+const timestamps = timelineData.map(d => new Date(d.timestamp * 1000));
+const cpuData = timelineData.map(d => d.cpu_percent);
+const memoryData = timelineData.map(d => d.memory_percent);
+
+// Common chart options
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+        x: {
+            type: 'time',
+            time: {
+                tooltipFormat: 'MMM dd, HH:mm',
+                displayFormats: {
+                    hour: 'HH:mm',
+                    day: 'MMM dd'
+                }
+            }
+        },
+        y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+                callback: function(value) {
+                    return value + '%';
+                }
+            }
+        }
+    },
+    plugins: {
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                }
+            }
+        }
+    }
+};
+
+// CPU Chart
+const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+new Chart(cpuCtx, {
+    type: 'line',
+    data: {
+        labels: timestamps,
+        datasets: [{
+            label: 'CPU Usage',
+            data: cpuData,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: chartOptions
+});
+
+// Memory Chart
+const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+new Chart(memoryCtx, {
+    type: 'line',
+    data: {
+        labels: timestamps,
+        datasets: [{
+            label: 'Memory Usage',
+            data: memoryData,
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: chartOptions
+});
+
+// Refresh data via AJAX to avoid page flash
+let refreshInterval;
+
+function refreshData() {
+    // Fetch updated data via AJAX
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            // Parse the response and update only the metric cards
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            
+            // Update metric cards
+            const metricCards = document.querySelectorAll('.card .card-body h3, .card .card-body h6, .card .card-body p');
+            const newMetricCards = newDoc.querySelectorAll('.card .card-body h3, .card .card-body h6, .card .card-body p');
+            metricCards.forEach((card, index) => {
+                if (newMetricCards[index]) {
+                    card.textContent = newMetricCards[index].textContent;
+                    // Preserve CSS classes for color coding
+                    card.className = newMetricCards[index].className;
+                }
+            });
+        })
+        .catch(error => {
+            console.log('Refresh failed:', error);
+        });
+}
+
+// Start auto-refresh every 60 seconds (less frequent to reduce distraction)
+refreshInterval = setInterval(refreshData, 60000);
+
+// Stop refresh when user is actively interacting
+let userActive = false;
+document.addEventListener('mousemove', () => {
+    userActive = true;
+    setTimeout(() => { userActive = false; }, 5000); // Reset after 5 seconds of inactivity
+});
+
+// Only refresh if user is not active
+const originalRefreshData = refreshData;
+refreshData = function() {
+    if (!userActive) {
+        originalRefreshData();
+    }
+};
+</script>
+{% endblock %}

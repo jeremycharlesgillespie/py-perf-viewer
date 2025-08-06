@@ -88,6 +88,7 @@ The dashboard also provides JSON API endpoints for programmatic access:
 - **Performance Overview**: Dashboard showing key metrics and trends
 - **Function Analysis**: Detailed analysis of individual function performance
 - **Record Browser**: Browse and filter performance records
+- **Timeline Viewer**: Visualize system and process performance over time with interactive charts
 - **REST API**: Programmatic access to performance data
 - **Real-time Data**: Automatically displays latest performance data from DynamoDB or local storage
 
@@ -200,6 +201,35 @@ flake8 pyperfweb/
 mypy pyperfweb/
 ```
 
+## Timeline Viewer
+
+The Timeline Viewer provides interactive visualization of system and process performance metrics:
+
+- **System Monitoring**: View overall system CPU and memory usage as a shaded background area
+- **Process Tracking**: Overlay specific Python process performance on top of system metrics
+- **Interactive Charts**: Switch between CPU and memory views, select specific processes
+- **Correlation Analysis**: Identify when system load impacts Python application performance
+
+To collect system monitoring data, use the PyPerf SystemMonitor:
+
+```python
+from py_perf import SystemMonitor, ProcessTracker
+
+# Create and start monitoring
+monitor = SystemMonitor(sample_interval=0.5)
+monitor.start_monitoring()
+
+# Track processes
+tracker = ProcessTracker(monitor)
+tracker.track_current_process()
+
+# Your code here...
+
+# Stop and save
+monitor.stop_monitoring()
+monitor.save_timeline_data()
+```
+
 ## Configuration
 
 The dashboard uses the same configuration system as the core py-perf library. See the [py-perf documentation](https://github.com/jeremycharlesgillespie/py-perf) for detailed configuration options.
@@ -209,8 +239,10 @@ The dashboard uses the same configuration system as the core py-perf library. Se
 - `GET /api/metrics/` - Performance metrics summary
 - `GET /api/hostnames/` - List of unique hostnames
 - `GET /api/functions/` - List of unique function names
+- `GET /api/timeline/` - System and process timeline data for visualization
 - `GET /records/` - Browse performance records
 - `GET /functions/{name}/` - Function-specific analysis
+- `GET /timeline/` - Interactive timeline viewer for system monitoring data
 
 ## Deployment
 

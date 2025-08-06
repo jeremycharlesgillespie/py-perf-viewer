@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyPerf Dashboard</title>
+    
+    <!-- Favicon -->
+    {% load static %}
+    <link rel="icon" type="image/svg+xml" href="{% static 'dashboard/favicon.svg' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'dashboard/favicon.ico' %}">
+    
+    <!-- CSS Variables for Dark Mode -->
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --sidebar-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --filter-bg: #f8f9fa;
+            --badge-bg: #e9ecef;
+            --badge-text: #495057;
+            --table-bg: #ffffff;
+            --table-hover: #f5f5f5;
+            --navbar-bg: #0d6efd;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #2d2d2d;
+            --border-color: #444444;
+            --filter-bg: #2d2d2d;
+            --badge-bg: #333333;
+            --badge-text: #e0e0e0;
+            --table-bg: #1e1e1e;
+            --table-hover: #2d2d2d;
+            --navbar-bg: #1a1a1a;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
+        /* Prevent white flash during page navigation */
+        html {
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            opacity: 1;
+            transition: opacity 0.1s ease-in-out, background-color 0.3s ease, color 0.3s ease;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Loading state */
+        body.loading,
+        #app.loading {
+            opacity: 0.95;
+        }
+
+        /* Ensure no flash of unstyled content */
+        #app {
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Loading spinner */
+        .initial-loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 123, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Improve loading experience */
+        #app.vue-loaded .initial-loading {
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="loading">
+    <!-- Vue.js App Mount Point -->
+    <div id="app">
+        <!-- Loading indicator while Vue app initializes -->
+        <div class="initial-loading">
+            <div class="loading-spinner"></div>
+            <p class="mt-3">Loading PyPerf Dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Vue.js will be loaded here by Vite in development or by Django in production -->
+    <script>
+        // Check if Vite dev server is available (development mode)
+        function loadViteDevServer() {
+            const viteClient = document.createElement('script');
+            viteClient.type = 'module';
+            viteClient.src = 'http://localhost:5173/@vite/client';
+            
+            const viteMain = document.createElement('script');
+            viteMain.type = 'module'; 
+            viteMain.src = 'http://localhost:5173/src/main.js';
+            
+            viteClient.onload = function() {
+                document.body.appendChild(viteMain);
+            };
+            
+            viteClient.onerror = function() {
+                // Vite dev server not available, try production build
+                loadProductionBuild();
+            };
+            
+            document.body.appendChild(viteClient);
+        }
+        
+        function loadProductionBuild() {
+            // Try to load production build
+            const prodScript = document.createElement('script');
+            prodScript.type = 'module';
+            prodScript.src = '{% load static %}{% static "dashboard/dist/js/main.js" %}';
+            
+            prodScript.onerror = function() {
+                // Production build not available, show message
+                showSetupMessage();
+            };
+            
+            document.body.appendChild(prodScript);
+        }
+        
+        function showSetupMessage() {
+            document.getElementById('app').innerHTML = `
+                <div style="text-align: center; padding: 50px; font-family: system-ui;">
+                    <h2>🚀 Vue.js SPA Setup Required</h2>
+                    <p>The Vue.js Single Page Application needs to be set up.</p>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px; text-align: left;">
+                        <h3>Quick Setup:</h3>
+                        <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">python3 setup.py</code>
+                        <br><br>
+                        <h3>Manual Setup:</h3>
+                        <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">npm install && npm run dev</code>
+                        <br><br>
+                        <p><strong>For now:</strong> <a href="/admin/">Django Admin</a> | <a href="/api/">API Endpoints</a></p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Start loading process
+        loadViteDevServer();
+    </script>
+</body>
+</html>

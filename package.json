@@ -1,0 +1,32 @@
+{
+  "name": "py-perf-viewer-spa",
+  "version": "1.0.0",
+  "description": "Vue.js SPA for py-perf performance data visualization",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.0",
+    "axios": "^1.6.0",
+    "bootstrap": "^5.3.0",
+    "chart.js": "^4.5.0",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-zoom": "^2.2.0",
+    "date-fns": "^4.1.0",
+    "pinia": "^2.1.0",
+    "vue": "^3.4.0",
+    "vue-chartjs": "^5.3.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-vue": "^9.19.0",
+    "vite": "^5.0.0"
+  },
+  "type": "module"
+}

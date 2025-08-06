@@ -1,0 +1,28 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Timeline Not Found - PyPerf Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="alert alert-warning">
+        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Timeline Data Not Found</h4>
+        <p>No timeline data was found for session ID: <code>{{ session_id }}</code></p>
+        <hr>
+        <p class="mb-0">This could mean:</p>
+        <ul>
+            <li>The session does not have system monitoring data enabled</li>
+            <li>The session ID is incorrect</li>
+            <li>The data has not been uploaded yet</li>
+        </ul>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{% url 'dashboard:timeline_viewer' %}" class="btn btn-primary">
+            <i class="fas fa-list"></i> View Available Sessions
+        </a>
+        <a href="{% url 'dashboard:home' %}" class="btn btn-secondary">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

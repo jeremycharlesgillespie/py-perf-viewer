@@ -1,0 +1,26 @@
+# py-perf-viewer configuration
+# This tells the viewer to read from the daemon's data directory
+
+py_perf:
+  enabled: true
+  debug: false
+
+# Use AWS DynamoDB for both app performance and system data
+local:
+  enabled: false
+
+aws:
+  region: "us-east-1"
+  table_name: "py-perf-data"  # Application performance data
+  auto_create_table: false
+
+# Dashboard configuration
+dashboard:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8000
+  debug: true
+
+# Logging
+logging:
+  level: "INFO"

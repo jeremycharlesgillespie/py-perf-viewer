@@ -37,12 +37,12 @@
             <div class="col-md-2">
                 <label for="start_date" class="form-label">Start Date</label>
                 <input type="date" name="start_date" id="start_date" class="form-control" 
-                       value="{{ current_filters.start_date }}">
+                       value="{% if current_filters.start_date %}{{ current_filters.start_date }}{% endif %}">
             </div>
             <div class="col-md-2">
                 <label for="end_date" class="form-label">End Date</label>
                 <input type="date" name="end_date" id="end_date" class="form-control" 
-                       value="{{ current_filters.end_date }}">
+                       value="{% if current_filters.end_date %}{{ current_filters.end_date }}{% endif %}">
             </div>
             <div class="col-md-2">
                 <label for="sort_by" class="form-label">Sort By</label>

@@ -5,6 +5,8 @@ from django.utils.dateparse import parse_datetime
 from datetime import datetime, timedelta
 from .services import dynamodb_service
 from .models import PerformanceRecord, PerformanceMetrics
+from .system_services import system_data_service
+from .system_models import SystemDataRecord, SystemSummary
 from typing import Optional
 
 
@@ -14,15 +16,21 @@ def dashboard_home(request):
     metrics = dynamodb_service.get_performance_metrics()
     recent_records = dynamodb_service.get_recent_records(hours=24, limit=20)
     
+    # Get system performance data
+    system_dashboard_data = system_data_service.get_system_dashboard_data()
+    
     # Get filter options
     hostnames = dynamodb_service.get_unique_hostnames()
     function_names = dynamodb_service.get_unique_function_names()
+    system_hostnames = system_data_service.get_system_hostnames()
     
     context = {
         'metrics': metrics,
         'recent_records': recent_records,
         'hostnames': hostnames,
         'function_names': function_names,
+        'system_data': system_dashboard_data,
+        'system_hostnames': system_hostnames,
     }
     
     return render(request, 'dashboard/home.html', context)
@@ -244,3 +252,104 @@ def api_functions(request):
     """API endpoint for unique function names."""
     functions = dynamodb_service.get_unique_function_names()
     return JsonResponse({'functions': functions})
+
+
+def timeline_viewer(request):
+    """Timeline viewer for system and process monitoring data."""
+    session_id = request.GET.get('session_id')
+    hostname = request.GET.get('hostname')
+    
+    if not session_id:
+        # Get recent sessions with system monitoring data
+        recent_sessions = dynamodb_service.get_sessions_with_system_data(limit=10)
+        return render(request, 'dashboard/timeline_select.html', {'sessions': recent_sessions})
+    
+    # Get timeline data for the specific session
+    timeline_data = dynamodb_service.get_timeline_data(session_id)
+    
+    if not timeline_data:
+        return HttpResponseNotFound(render(request, 'dashboard/timeline_not_found.html', {'session_id': session_id}).content)
+    
+    context = {
+        'session_id': session_id,
+        'hostname': hostname,
+        'timeline_data': timeline_data,
+        'has_system_data': bool(timeline_data.get('system')),
+        'has_process_data': bool(timeline_data.get('processes')),
+        'metadata': timeline_data.get('metadata', {}),
+    }
+    
+    return render(request, 'dashboard/timeline_viewer.html', context)
+
+
+def api_timeline_data(request):
+    """API endpoint for timeline data."""
+    session_id = request.GET.get('session_id')
+    data_type = request.GET.get('type', 'all')  # 'system', 'process', or 'all'
+    
+    if not session_id:
+        return JsonResponse({'error': 'session_id is required'}, status=400)
+    
+    timeline_data = dynamodb_service.get_timeline_data(session_id)
+    
+    if not timeline_data:
+        return JsonResponse({'error': 'Timeline data not found'}, status=404)
+    
+    response_data = {'metadata': timeline_data.get('metadata', {})}
+    
+    if data_type in ['system', 'all']:
+        response_data['system'] = timeline_data.get('system', [])
+    
+    if data_type in ['process', 'all']:
+        response_data['processes'] = timeline_data.get('processes', {})
+    
+    return JsonResponse(response_data)
+
+
+def system_metrics(request):
+    """System metrics dashboard view."""
+    hostname = request.GET.get('hostname')
+    hours = int(request.GET.get('hours', 24))
+    
+    if hostname:
+        # Show detailed metrics for specific hostname
+        system_metrics_data = system_data_service.get_system_metrics_for_hostname(hostname, hours)
+        context = {
+            'hostname': hostname,
+            'system_metrics': system_metrics_data,
+            'timeline_data': system_metrics_data.get('timeline_data', []),
+            'hours': hours,
+        }
+        return render(request, 'dashboard/system_detail.html', context)
+    else:
+        # Show overview of all system hosts
+        dashboard_data = system_data_service.get_system_dashboard_data()
+        context = {
+            'system_data': dashboard_data,
+            'hours': hours,
+        }
+        return render(request, 'dashboard/system_overview.html', context)
+
+
+def api_system_metrics(request):
+    """API endpoint for system metrics data."""
+    hostname = request.GET.get('hostname')
+    hours = int(request.GET.get('hours', 24))
+    
+    if hostname:
+        metrics_data = system_data_service.get_system_metrics_for_hostname(hostname, hours)
+        return JsonResponse(metrics_data)
+    else:
+        dashboard_data = system_data_service.get_system_dashboard_data()
+        return JsonResponse(dashboard_data)
+
+
+def api_system_hostnames(request):
+    """API endpoint for system hostnames."""
+    hostnames = system_data_service.get_system_hostnames()
+    return JsonResponse({'hostnames': hostnames})
+
+
+def spa_view(request):
+    """Serve the Vue.js Single Page Application."""
+    return render(request, 'spa/index.html')

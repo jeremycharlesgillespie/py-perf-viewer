@@ -8,6 +8,19 @@
         <i class="fas fa-tachometer-alt"></i> Performance Dashboard
     </h1>
 
+    <!-- Navigation Buttons -->
+    <div class="mb-4">
+        <a href="{% url 'dashboard:system_metrics' %}" class="btn btn-primary">
+            <i class="fas fa-server"></i> System Metrics
+        </a>
+        <a href="{% url 'dashboard:records' %}" class="btn btn-secondary">
+            <i class="fas fa-list"></i> Performance Records
+        </a>
+        <a href="{% url 'dashboard:timeline_viewer' %}" class="btn btn-secondary">
+            <i class="fas fa-chart-line"></i> Timeline Viewer
+        </a>
+    </div>
+
     <!-- Key Metrics -->
     <div class="row">
         <div class="col-md-3">
@@ -130,15 +143,80 @@
         </div>
     </div>
 
+    <!-- System Metrics Summary -->
+    {% if system_data.total_hosts > 0 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-server"></i> System Metrics Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Active System Hosts:</strong> {{ system_data.total_hosts }}</p>
+                            <p><strong>System Records:</strong> {{ system_data.total_records }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="{% url 'dashboard:system_metrics' %}" class="btn btn-primary">
+                                View All System Metrics <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% if system_data.hosts_summary %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Hostname</th>
+                                    <th>Current CPU</th>
+                                    <th>Current Memory</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for host in system_data.hosts_summary|slice:":3" %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'dashboard:system_metrics' %}?hostname={{ host.hostname }}">
+                                            <strong>{{ host.hostname }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if host.current_cpu <= 60 %}bg-success{% elif host.current_cpu <= 80 %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ host.current_cpu|floatformat:1 }}%</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if host.current_memory <= 60 %}bg-success{% elif host.current_memory <= 80 %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ host.current_memory|floatformat:1 }}%</span>
+                                    </td>
+                                    <td>
+                                        <small class="timestamp" data-timestamp="{{ host.last_seen|date:'U' }}">{{ host.last_seen|date:"H:i:s" }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Recent Performance Records -->
     <div class="row mt-4">
         <div class="col-12">
             <div class="card performance-table">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5><i class="fas fa-clock text-success"></i> Recent Performance Records (Last 24h)</h5>
-                    <a href="{% url 'dashboard:records' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> View All Records
-                    </a>
+                    <div>
+                        <a href="{% url 'dashboard:timeline_viewer' %}" class="btn btn-success btn-sm me-2">
+                            <i class="fas fa-chart-line"></i> Timeline Viewer
+                        </a>
+                        <a href="{% url 'dashboard:records' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-list"></i> View All Records
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if recent_records %}
@@ -243,6 +321,26 @@
 function refreshData() {
     location.reload();
 }
+
+// Convert UTC timestamps to local time
+function convertTimestampsToLocal() {
+    document.querySelectorAll('.timestamp').forEach(function(element) {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            const date = new Date(parseInt(timestamp) * 1000);
+            element.textContent = date.toLocaleTimeString([], {
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short'
+            });
+        }
+    });
+}
+
+// Convert timestamps on page load
+convertTimestampsToLocal();
 
 // Auto-refresh every 5 minutes
 setInterval(refreshData, 300000);

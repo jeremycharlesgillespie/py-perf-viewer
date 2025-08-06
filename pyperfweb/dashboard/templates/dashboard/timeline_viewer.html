@@ -1,0 +1,286 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Timeline Viewer - PyPerf Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="fas fa-chart-line"></i> System Performance Timeline</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Session Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Session ID:</strong><br>
+                    <code>{{ session_id }}</code>
+                </div>
+                <div class="col-md-3">
+                    <strong>Platform:</strong><br>
+                    {{ metadata.platform|default:"Unknown" }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Sample Interval:</strong><br>
+                    {{ metadata.sample_interval|default:"N/A" }}s
+                </div>
+                <div class="col-md-3">
+                    <strong>Duration:</strong><br>
+                    <span id="duration">Calculating...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Controls -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Chart Controls</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="metricSelect" class="form-label">Metric</label>
+                    <select class="form-select" id="metricSelect">
+                        <option value="cpu_percent" selected>CPU Usage (%)</option>
+                        <option value="memory_percent">Memory Usage (%)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="processSelect" class="form-label">Process</label>
+                    <select class="form-select" id="processSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showSystemLoad" checked>
+                        <label class="form-check-label" for="showSystemLoad">
+                            Show System Load
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-primary w-100" onclick="updateChart()">
+                        <i class="fas fa-sync"></i> Update Chart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Timeline Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Performance Timeline</h5>
+        </div>
+        <div class="card-body" style="height: 500px;">
+            <canvas id="timelineChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Back Button -->
+    <div class="mt-4">
+        <a href="{% url 'dashboard:timeline_viewer' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Session List
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let timelineData = null;
+let timelineChart = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    fetchTimelineData();
+});
+
+function fetchTimelineData() {
+    fetch('{% url "dashboard:api_timeline_data" %}?session_id={{ session_id }}')
+        .then(response => response.json())
+        .then(data => {
+            timelineData = data;
+            populateProcessSelector();
+            calculateDuration();
+            updateChart();
+        })
+        .catch(error => {
+            console.error('Error fetching timeline data:', error);
+            alert('Failed to load timeline data');
+        });
+}
+
+function populateProcessSelector() {
+    const processSelect = document.getElementById('processSelect');
+    processSelect.innerHTML = '<option value="">All Processes</option>';
+    
+    if (timelineData && timelineData.processes) {
+        Object.keys(timelineData.processes).forEach(pid => {
+            const process = timelineData.processes[pid][0]; // Get first entry for process info
+            const option = document.createElement('option');
+            option.value = pid;
+            option.textContent = `${process.name} (PID: ${pid})`;
+            processSelect.appendChild(option);
+        });
+    }
+}
+
+function calculateDuration() {
+    if (timelineData && timelineData.metadata) {
+        const start = timelineData.metadata.start_time;
+        const end = timelineData.metadata.end_time;
+        if (start && end) {
+            const duration = end - start;
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            document.getElementById('duration').textContent = `${minutes}m ${seconds}s`;
+        }
+    }
+}
+
+function updateChart() {
+    const metric = document.getElementById('metricSelect').value;
+    const selectedPid = document.getElementById('processSelect').value;
+    const showSystem = document.getElementById('showSystemLoad').checked;
+    
+    if (!timelineData) return;
+    
+    // Prepare datasets
+    const datasets = [];
+    
+    // System load background (area chart)
+    if (showSystem && timelineData.system) {
+        const systemData = timelineData.system.map(point => ({
+            x: new Date(point.timestamp * 1000),
+            y: point[metric] || 0
+        }));
+        
+        datasets.push({
+            label: 'System Load',
+            data: systemData,
+            borderColor: '#ADD8E6',
+            backgroundColor: 'rgba(173, 216, 230, 0.3)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            borderWidth: 2,
+            order: 2 // Draw behind process data
+        });
+    }
+    
+    // Process data (line chart)
+    if (selectedPid && timelineData.processes[selectedPid]) {
+        const processData = timelineData.processes[selectedPid].map(point => ({
+            x: new Date(point.timestamp * 1000),
+            y: point[metric] || 0
+        }));
+        
+        datasets.push({
+            label: `Process ${selectedPid}`,
+            data: processData,
+            borderColor: '#DC143C',
+            backgroundColor: 'rgba(220, 20, 60, 0.1)',
+            fill: false,
+            tension: 0.4,
+            pointRadius: 2,
+            borderWidth: 3,
+            order: 1 // Draw on top
+        });
+    } else if (!selectedPid && timelineData.processes) {
+        // Show all processes
+        let colorIndex = 0;
+        const colors = ['#DC143C', '#4B0082', '#FF6347', '#32CD32', '#FF1493'];
+        
+        Object.entries(timelineData.processes).slice(0, 5).forEach(([pid, data]) => {
+            const processData = data.map(point => ({
+                x: new Date(point.timestamp * 1000),
+                y: point[metric] || 0
+            }));
+            
+            datasets.push({
+                label: `${data[0].name} (${pid})`,
+                data: processData,
+                borderColor: colors[colorIndex % colors.length],
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                pointRadius: 1,
+                borderWidth: 2,
+                order: 1
+            });
+            
+            colorIndex++;
+        });
+    }
+    
+    // Create or update chart
+    const ctx = document.getElementById('timelineChart').getContext('2d');
+    
+    if (timelineChart) {
+        timelineChart.destroy();
+    }
+    
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `${metric === 'cpu_percent' ? 'CPU' : 'Memory'} Usage Over Time`
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            second: 'HH:mm:ss',
+                            minute: 'HH:mm',
+                            hour: 'HH:mm'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: metric === 'cpu_percent' ? 'CPU Usage (%)' : 'Memory Usage (%)'
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

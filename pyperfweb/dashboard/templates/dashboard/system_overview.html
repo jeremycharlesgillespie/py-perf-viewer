@@ -1,0 +1,213 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}System Metrics Overview{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">System Metrics Overview</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Hosts</h5>
+                    <h2 class="text-primary">{{ system_data.total_hosts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Records</h5>
+                    <h2 class="text-success">{{ system_data.total_records }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Time Range</h5>
+                    <p class="mb-0">{{ hours }} hours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Status</h5>
+                    <p class="mb-0 text-success"><i class="fas fa-check-circle"></i> Active</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hosts Summary -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">System Hosts</h3>
+        </div>
+        <div class="card-body">
+            {% if system_data.hosts_summary %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Hostname</th>
+                                <th>Current CPU %</th>
+                                <th>Current Memory %</th>
+                                <th>Status</th>
+                                <th>Last Update</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for host in system_data.hosts_summary %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'dashboard:system_metrics' %}?hostname={{ host.hostname }}">
+                                        <strong>{{ host.hostname }}</strong>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge {% if host.current_cpu <= 60 %}bg-success{% elif host.current_cpu <= 80 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ host.current_cpu|floatformat:1 }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if host.current_memory <= 60 %}bg-success{% elif host.current_memory <= 80 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ host.current_memory|floatformat:1 }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if host.is_online %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-circle"></i> Online
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-circle"></i> Offline
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="timestamp" data-timestamp="{{ host.last_seen|date:'U' }}">{{ host.last_seen|date:"H:i:s" }}</small>
+                                    <br><small class="text-muted timestamp-date" data-timestamp="{{ host.last_seen|date:'U' }}">{{ host.last_seen|date:"M d" }}</small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:system_metrics' %}?hostname={{ host.hostname }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-chart-line"></i> Investigate
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No system data available yet. 
+                    Make sure the py-perf-daemon is running and uploading data to DynamoDB.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Time Range Filter -->
+    <div class="mt-4">
+        <form method="get" class="form-inline">
+            <label for="hours" class="mr-2">Time Range:</label>
+            <select name="hours" id="hours" class="form-control mr-2">
+                <option value="1" {% if hours == 1 %}selected{% endif %}>Last 1 hour</option>
+                <option value="6" {% if hours == 6 %}selected{% endif %}>Last 6 hours</option>
+                <option value="24" {% if hours == 24 %}selected{% endif %}>Last 24 hours</option>
+                <option value="48" {% if hours == 48 %}selected{% endif %}>Last 48 hours</option>
+                <option value="168" {% if hours == 168 %}selected{% endif %}>Last 7 days</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Update</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Refresh data via AJAX to avoid page flash
+let refreshInterval;
+
+function refreshData() {
+    // Fetch updated data via AJAX
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            // Parse the response and update only the data sections
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            
+            // Update metric cards
+            const metricCards = document.querySelectorAll('.card .card-body h2, .card .card-body p');
+            const newMetricCards = newDoc.querySelectorAll('.card .card-body h2, .card .card-body p');
+            metricCards.forEach((card, index) => {
+                if (newMetricCards[index]) {
+                    card.textContent = newMetricCards[index].textContent;
+                }
+            });
+            
+            // Update table content
+            const tableBody = document.querySelector('table tbody');
+            const newTableBody = newDoc.querySelector('table tbody');
+            if (tableBody && newTableBody) {
+                tableBody.innerHTML = newTableBody.innerHTML;
+                // Convert timestamps to local time after updating content
+                convertTimestampsToLocal();
+            }
+        })
+        .catch(error => {
+            console.log('Refresh failed:', error);
+        });
+}
+
+// Convert UTC timestamps to local time
+function convertTimestampsToLocal() {
+    document.querySelectorAll('.timestamp').forEach(function(element) {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            const date = new Date(parseInt(timestamp) * 1000);
+            element.textContent = date.toLocaleTimeString([], {
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short'
+            });
+        }
+    });
+    
+    document.querySelectorAll('.timestamp-date').forEach(function(element) {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            const date = new Date(parseInt(timestamp) * 1000);
+            element.textContent = date.toLocaleDateString([], {month: 'short', day: 'numeric'});
+        }
+    });
+}
+
+// Convert timestamps on page load
+convertTimestampsToLocal();
+
+// Start auto-refresh every 60 seconds (less frequent to reduce distraction)
+refreshInterval = setInterval(refreshData, 60000);
+
+// Stop refresh when user is actively interacting
+let userActive = false;
+document.addEventListener('mousemove', () => {
+    userActive = true;
+    setTimeout(() => { userActive = false; }, 5000); // Reset after 5 seconds of inactivity
+});
+
+// Only refresh if user is not active
+const originalRefreshData = refreshData;
+refreshData = function() {
+    if (!userActive) {
+        originalRefreshData();
+    }
+};
+</script>
+{% endblock %}

@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 """
-Startup script for py-perf-viewer Django dashboard.
+Startup script for py-perf-viewer Django dashboard with Vue.js SPA support.
 Handles setup and launches the development server.
 """
 
 import os
 import sys
 import subprocess
+import shutil
+import time
+import signal
 from pathlib import Path
 
 
-def run_command(cmd, description):
+def run_command(cmd, description, check=True):
     """Run a command and handle errors."""
     print(f"🔹 {description}")
     try:
-        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, check=check, capture_output=True, text=True)
         if result.stdout.strip():
             print(result.stdout)
         return True
@@ -25,10 +28,145 @@ def run_command(cmd, description):
         return False
 
 
+def check_nodejs():
+    """Check if Node.js and npm are available."""
+    if not shutil.which("node"):
+        return False, "Node.js not found"
+    if not shutil.which("npm"):
+        return False, "npm not found"
+    
+    try:
+        result = subprocess.run("node --version", shell=True, capture_output=True, text=True)
+        node_version = result.stdout.strip()
+        return True, f"Node.js {node_version}"
+    except:
+        return False, "Unable to check Node.js version"
+
+
+def setup_vue_development():
+    """Set up Vue.js development environment."""
+    print("\n⚡ Setting up Vue.js development environment...")
+    
+    # Check if package.json exists
+    if not Path("package.json").exists():
+        print("❌ package.json not found. Vue.js SPA not available.")
+        return False
+    
+    # Check Node.js
+    nodejs_ok, nodejs_msg = check_nodejs()
+    if not nodejs_ok:
+        print(f"❌ {nodejs_msg}")
+        print("💡 Please install Node.js from https://nodejs.org/")
+        print("   macOS: brew install node")
+        print("   Ubuntu: sudo apt install nodejs npm")
+        return False
+    
+    print(f"✅ {nodejs_msg}")
+    
+    # Install npm dependencies
+    if not Path("node_modules").exists():
+        print("📦 Installing Node.js dependencies...")
+        if not run_command("npm install", "Installing Vue.js dependencies"):
+            print("❌ Failed to install Node.js dependencies")
+            return False
+    else:
+        print("✅ Node.js dependencies already installed")
+    
+    return True
+
+
+def start_development_servers():
+    """Start both Django and Vite development servers."""
+    print("\n🚀 Starting development servers...")
+    
+    # List to keep track of child processes
+    processes = []
+    
+    def cleanup_processes(signum=None, frame=None):
+        """Clean up child processes on exit."""
+        print("\n🛑 Stopping development servers...")
+        for proc in processes:
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except:
+                try:
+                    proc.kill()
+                except:
+                    pass
+        sys.exit(0)
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, cleanup_processes)
+    signal.signal(signal.SIGTERM, cleanup_processes)
+    
+    try:
+        # Start Django development server
+        print("🐍 Starting Django server on port 8000...")
+        django_process = subprocess.Popen(
+            ["python", "manage.py", "runserver", "8000"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+        processes.append(django_process)
+        
+        # Give Django time to start
+        time.sleep(2)
+        
+        # Check if Vue.js setup is available
+        if Path("package.json").exists() and setup_vue_development():
+            print("⚡ Starting Vite development server on port 5173...")
+            vite_process = subprocess.Popen(
+                ["npm", "run", "dev"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, 
+                universal_newlines=True
+            )
+            processes.append(vite_process)
+            
+            # Give Vite time to start
+            time.sleep(3)
+            
+            print("\n✅ Development servers started!")
+            print("🌐 Django API server: http://localhost:8000/api/")
+            print("⚡ Vite dev server: http://localhost:5173")
+            print("🎯 Vue.js SPA: http://localhost:8000")
+            print("\n💡 The Vue.js Single Page Application provides:")
+            print("   • Zero white flash navigation")
+            print("   • Real-time system metrics")
+            print("   • Smooth page transitions")
+            print("   • Dark mode support")
+        else:
+            print("\n✅ Django server started!")
+            print("🌐 Traditional Django app: http://localhost:8000")
+            print("\n💡 For Vue.js SPA features, run: python setup.py")
+        
+        print("\nPress Ctrl+C to stop all servers")
+        
+        # Wait for processes to complete
+        try:
+            while True:
+                time.sleep(1)
+                # Check if any process has died
+                for proc in processes:
+                    if proc.poll() is not None:
+                        print(f"⚠️  Process {proc.pid} has stopped")
+                        cleanup_processes()
+        except KeyboardInterrupt:
+            cleanup_processes()
+            
+    except Exception as e:
+        print(f"❌ Error starting servers: {e}")
+        cleanup_processes()
+
+
 def main():
     """Main startup process."""
-    print("🚀 Starting PyPerf Viewer Dashboard")
+    print("🚀 PyPerf Viewer Dashboard")
     print("=" * 50)
+    print("Django backend + Vue.js SPA frontend")
+    print()
     
     # Check if we're in the right directory
     if not Path("manage.py").exists():
@@ -41,8 +179,8 @@ def main():
         print("   Consider running: python -m venv venv && source venv/bin/activate")
     
     # Install/check requirements
-    print("\n📦 Checking requirements...")
-    if not run_command("pip install -r requirements.txt", "Installing requirements"):
+    print("📦 Checking Python requirements...")
+    if not run_command("pip3 install -r requirements.txt", "Installing/checking requirements"):
         print("❌ Failed to install requirements. Please check your Python environment.")
         sys.exit(1)
     
@@ -77,17 +215,37 @@ def main():
         print("     data_dir: './perf_data'")
         print("   ---")
     
-    # Start Django development server
-    print(f"\n🌐 Starting Django development server...")
-    print("   Dashboard will be available at: http://localhost:8000")
-    print("   Press Ctrl+C to stop the server")
-    print()
-    
-    try:
-        # Use os.system to allow Ctrl+C to work properly
-        os.system("python manage.py runserver 8000")
-    except KeyboardInterrupt:
-        print("\n👋 Server stopped by user")
+    # Check for Vue.js setup
+    if Path("package.json").exists():
+        nodejs_ok, nodejs_msg = check_nodejs()
+        if nodejs_ok:
+            print(f"\n⚡ Vue.js SPA detected - {nodejs_msg}")
+            start_development_servers()
+        else:
+            print(f"\n⚠️  Vue.js SPA available but {nodejs_msg}")
+            print("   Install Node.js to enable the Vue.js Single Page Application")
+            print("   For now, starting traditional Django server...")
+            
+            print(f"\n🌐 Starting Django development server...")
+            print("   Dashboard: http://localhost:8000")
+            print("   Press Ctrl+C to stop")
+            print()
+            
+            try:
+                os.system("python manage.py runserver 8000")
+            except KeyboardInterrupt:
+                print("\n👋 Server stopped by user")
+    else:
+        print(f"\n🌐 Starting traditional Django server...")
+        print("   Dashboard: http://localhost:8000")
+        print("   💡 Run 'python setup.py' to set up Vue.js SPA")
+        print("   Press Ctrl+C to stop")
+        print()
+        
+        try:
+            os.system("python manage.py runserver 8000")
+        except KeyboardInterrupt:
+            print("\n👋 Server stopped by user")
 
 
 if __name__ == "__main__":

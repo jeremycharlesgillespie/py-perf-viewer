@@ -51,6 +51,22 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Prevent white flash during page navigation */
+        html {
+            background-color: var(--bg-color);
+        }
+
+        /* Smooth page transitions */
+        body {
+            opacity: 1;
+            transition: opacity 0.1s ease-in-out, background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Preload styling to prevent flash */
+        body.loading {
+            opacity: 0.95;
+        }
+
         .metric-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -235,7 +251,7 @@
         }
     </style>
 </head>
-<body>
+<body class="loading">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{% url 'dashboard:home' %}">
@@ -254,6 +270,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dashboard:records' %}">
                             <i class="fas fa-table"></i> Performance Records
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dashboard:timeline_viewer' %}">
+                            <i class="fas fa-chart-line"></i> Timeline Viewer
                         </a>
                     </li>
                     <li class="nav-item">
@@ -325,6 +346,28 @@
         // Initialize dark mode toggle when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             new DarkModeToggle();
+        });
+
+        // Smooth page transitions to prevent white flash
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove loading class when page is fully loaded
+            document.body.classList.remove('loading');
+            
+            // Add smooth transition for navigation links
+            document.querySelectorAll('a:not([target="_blank"])').forEach(function(link) {
+                // Skip links that are likely to be AJAX or same-page
+                if (link.href && !link.href.includes('#') && link.href.includes(window.location.origin)) {
+                    link.addEventListener('click', function(e) {
+                        // Add a subtle loading effect
+                        document.body.classList.add('loading');
+                    });
+                }
+            });
+        });
+
+        // Ensure body opacity is set on page load
+        window.addEventListener('pageshow', function() {
+            document.body.classList.remove('loading');
         });
     </script>
     
