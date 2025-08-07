@@ -71,11 +71,35 @@
         <div class="col-12">
           <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">System Usage</h5>
-              <div class="chart-controls">
-                <button class="btn btn-sm btn-outline-secondary me-2" @click="resetZoom('combined')">
-                  <i class="fas fa-search-minus"></i> Reset Zoom
-                </button>
+              <div class="d-flex align-items-center">
+                <h5 class="mb-0 me-3">System Usage</h5>
+                <small class="text-muted" v-if="hostMetrics.first_seen">
+                  <i class="fas fa-calendar-plus"></i>
+                  First Seen: 
+                  <span class="fw-bold">{{ formatTimestamp(hostMetrics.first_seen) }}</span>
+                </small>
+              </div>
+              <div class="chart-controls d-flex align-items-center">
+                <small class="text-muted me-3">
+                  <i class="fas fa-clock"></i>
+                  Last Update: 
+                  <span class="fw-bold">{{ formatTimestamp(hostMetrics.last_seen || hostMetrics.time_range?.end) }}</span>
+                </small>
+                <div class="btn-group" role="group">
+                  <button 
+                    v-for="level in zoomLevels" 
+                    :key="level.label"
+                    class="btn btn-sm"
+                    :class="currentZoomLevel === level.label ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="setZoomLevel(level)"
+                    :title="`Show last ${level.label}`"
+                  >
+                    {{ level.label }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" @click="resetZoom('combined')" title="Show all data">
+                    <i class="fas fa-expand"></i> All
+                  </button>
+                </div>
               </div>
             </div>
             <div class="card-body" style="position: relative;">
@@ -93,24 +117,6 @@
         </div>
       </div>
 
-      <!-- Time Range Info -->
-      <div class="card mt-4">
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <p><strong>Time Range:</strong> Last {{ hours }} hours</p>
-            </div>
-            <div class="col-md-6">
-              <p v-if="hostMetrics.first_seen">
-                <strong>First Seen:</strong> {{ formatDateTime(hostMetrics.first_seen) }}
-              </p>
-              <p v-if="hostMetrics.time_range">
-                <strong>Last Update:</strong> {{ formatDateTime(hostMetrics.time_range.end) }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Time Range Filter -->
@@ -135,6 +141,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSystemStore } from '@/stores/system'
+import { formatTimestamp } from '@/services/api'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -182,6 +189,21 @@ export default {
     // Chart references
     const combinedChart = ref(null)
     let combinedChartInstance = null
+    
+    // Zoom levels configuration
+    const zoomLevels = [
+      { label: '1m', minutes: 1, ticks: 'second', unit: 'second', stepSize: 10, maxTicksLimit: 7 },
+      { label: '5m', minutes: 5, ticks: 'minute', unit: 'minute', stepSize: 1 },
+      { label: '10m', minutes: 10, ticks: 'minute', unit: 'minute', stepSize: 2 },
+      { label: '30m', minutes: 30, ticks: 'minute', unit: 'minute', stepSize: 5 },
+      { label: '1h', minutes: 60, ticks: 'minute', unit: 'minute', stepSize: 10 },
+      { label: '2h', minutes: 120, ticks: 'hour', unit: 'hour', stepSize: 1 },
+      { label: '4h', minutes: 240, ticks: 'hour', unit: 'hour', stepSize: 1 },
+      { label: '12h', minutes: 720, ticks: 'hour', unit: 'hour', stepSize: 2 },
+      { label: '24h', minutes: 1440, ticks: 'hour', unit: 'hour', stepSize: 4 }
+    ]
+    
+    const currentZoomLevel = ref(null)
 
     // Computed properties
     const hostMetrics = computed(() => systemStore.currentHostMetrics)
@@ -269,6 +291,11 @@ export default {
       const dataInterval = 60 * 1000 // 1 minute intervals in milliseconds
       const minRange = minDataPoints * dataInterval // 10 minutes minimum view
       
+      // Function to clear zoom level when user manually zooms
+      const handleZoom = ({ chart }) => {
+        currentZoomLevel.value = null
+      }
+      
       return {
         type: 'line',
         data: {
@@ -314,14 +341,37 @@ export default {
             x: {
               type: 'time',
               time: {
+                unit: 'minute',
+                stepSize: 5,
                 displayFormats: {
+                  second: 'HH:mm:ss',
+                  minute: 'HH:mm',
                   hour: 'HH:mm',
                   day: 'MMM dd'
-                }
+                },
+                tooltipFormat: 'HH:mm:ss'
               },
               title: {
                 display: true,
-                text: 'Time'
+                text: 'Time (CDT)'
+              },
+              ticks: {
+                source: 'auto',
+                autoSkip: true,
+                maxRotation: 45,
+                minRotation: 45,
+                callback: function(value, index, ticks) {
+                  const date = new Date(value)
+                  
+                  // Standard HH:mm:ss CDT format for all zoom levels
+                  return date.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: 'America/Chicago'
+                  }) + ' CDT'
+                }
               }
             },
             y: {
@@ -347,16 +397,20 @@ export default {
               },
               zoom: {
                 wheel: {
-                  enabled: true
+                  enabled: true,
+                  speed: 0.1,
+                  modifierKey: null  // No modifier key needed
                 },
                 pinch: {
                   enabled: true
                 },
-                mode: 'x'
+                mode: 'x',
+                onZoom: handleZoom
               },
               limits: {
                 x: {
-                  minRange: minRange // Dynamic minimum range based on data density
+                  minRange: 30 * 1000,  // Minimum 30 seconds view (maximum zoom in)
+                  maxRange: 48 * 60 * 60 * 1000  // Maximum 48 hours view (maximum zoom out)
                 }
               }
             },
@@ -451,6 +505,19 @@ export default {
         console.log('Updating chart with CPU points:', cpuData.length, 'Memory points:', memoryData.length)
         combinedChartInstance.data.datasets[0].data = cpuData // CPU dataset
         combinedChartInstance.data.datasets[1].data = memoryData // Memory dataset
+        
+        // Auto-scroll to show newest data if no specific zoom level is set
+        if (!currentZoomLevel.value && cpuData.length > 0) {
+          const latestTime = Math.max(...cpuData.map(point => point.x.getTime()))
+          const timeWindow = 30 * 60 * 1000 // Show last 30 minutes by default
+          const earliestTime = latestTime - timeWindow
+          
+          // Update the visible range to show the newest data
+          combinedChartInstance.options.scales.x.min = earliestTime
+          combinedChartInstance.options.scales.x.max = latestTime
+          console.log(`Auto-scrolled to show newest data: ${new Date(latestTime).toISOString()}`)
+        }
+        
         combinedChartInstance.update('active')
         
         // If no data, make sure chart is still visible
@@ -462,10 +529,144 @@ export default {
       }
     }
 
+    // Set zoom level to show specific time range
+    const setZoomLevel = (level) => {
+      if (!combinedChartInstance || !hostMetrics.value?.timeline_data) return
+      
+      currentZoomLevel.value = level.label
+      
+      // Get the latest data point time
+      const timelineData = hostMetrics.value.timeline_data
+      const latestTime = Math.max(...timelineData.map(d => d.timestamp * 1000))
+      const earliestTime = latestTime - (level.minutes * 60 * 1000)
+      
+      // Update chart time axis configuration
+      combinedChartInstance.options.scales.x.time.unit = level.unit
+      
+      // Configure zoom level-specific settings
+      if (level.label === '1m') {
+        // For 1-minute view, use Chart.js default spacing with second precision
+        console.log('1m zoom: Using default Chart.js time marker spacing')
+        
+        // Configure time scale for seconds with default spacing
+        combinedChartInstance.options.scales.x.time = {
+          ...combinedChartInstance.options.scales.x.time,
+          unit: 'second',
+          minUnit: 'second'
+        }
+        
+        // Let Chart.js handle tick generation automatically
+        combinedChartInstance.options.scales.x.ticks = {
+          ...combinedChartInstance.options.scales.x.ticks,
+          autoSkip: true,         // Let Chart.js decide spacing
+          source: 'auto',         // Optimal tick generation
+          maxRotation: 45,        // Angle time markers at 45 degrees
+          minRotation: 45,        // Force 45 degrees (don't auto-adjust)
+          callback: function(value, index, ticks) {
+            const date = new Date(value)
+            return date.toLocaleTimeString('en-US', {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              timeZone: 'America/Chicago'
+            }) + ' CDT'
+          }
+        }
+        
+        console.log(`1m zoom: Time range ${new Date(earliestTime).toISOString()} to ${new Date(latestTime).toISOString()}`)
+      } else {
+        // Configure for other zoom levels with standard format
+        combinedChartInstance.options.scales.x.time = {
+          ...combinedChartInstance.options.scales.x.time,
+          unit: level.unit,
+          minUnit: 'minute'
+        }
+        
+        combinedChartInstance.options.scales.x.ticks = {
+          ...combinedChartInstance.options.scales.x.ticks,
+          autoSkip: true,
+          source: 'auto',
+          maxRotation: 45,        // 45-degree angle for all zoom levels
+          minRotation: 45,        // Force 45 degrees
+          callback: function(value, index, ticks) {
+            const date = new Date(value)
+            
+            // Standard HH:mm:ss CDT format for all zoom levels
+            return date.toLocaleTimeString('en-US', {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              timeZone: 'America/Chicago'
+            }) + ' CDT'
+          }
+        }
+        
+        // Clean up any 1-minute zoom specific properties
+        delete combinedChartInstance.options.scales.x.ticks.stepSize
+        delete combinedChartInstance.options.scales.x.ticks.maxTicksLimit
+      }
+      
+      // Set the visible range
+      combinedChartInstance.options.scales.x.min = earliestTime
+      combinedChartInstance.options.scales.x.max = latestTime
+      
+      // Update the chart
+      combinedChartInstance.update('none')
+    }
+    
     // Reset zoom
     const resetZoom = (chartType) => {
       if (chartType === 'combined' && combinedChartInstance) {
-        combinedChartInstance.resetZoom()
+        currentZoomLevel.value = null
+        
+        // Instead of resetZoom(), use the same logic as 24h button to be consistent
+        if (hostMetrics.value?.timeline_data && hostMetrics.value.timeline_data.length > 0) {
+          // Get the time range of available data (same as 24h button)
+          const timelineData = hostMetrics.value.timeline_data
+          const latestTime = Math.max(...timelineData.map(d => d.timestamp * 1000))
+          const earliestTime = Math.min(...timelineData.map(d => d.timestamp * 1000))
+          
+          // Use the full data range, but with same axis configuration as 24h
+          combinedChartInstance.options.scales.x.time = {
+            ...combinedChartInstance.options.scales.x.time,
+            unit: 'hour',      // Same as 24h button
+            minUnit: 'minute'
+          }
+          
+          combinedChartInstance.options.scales.x.ticks = {
+            ...combinedChartInstance.options.scales.x.ticks,
+            autoSkip: true,
+            source: 'auto',
+            maxRotation: 45,
+            minRotation: 45,
+            callback: function(value, index, ticks) {
+              const date = new Date(value)
+              
+              // Standard HH:mm:ss CDT format for all zoom levels
+              return date.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'America/Chicago'
+              }) + ' CDT'
+            }
+          }
+          
+          // Set the visible range to show all available data
+          combinedChartInstance.options.scales.x.min = earliestTime
+          combinedChartInstance.options.scales.x.max = latestTime
+        } else {
+          // Fallback to standard reset if no data
+          combinedChartInstance.resetZoom()
+        }
+        
+        // Clean up zoom-specific properties
+        delete combinedChartInstance.options.scales.x.ticks.stepSize
+        delete combinedChartInstance.options.scales.x.ticks.maxTicksLimit
+        combinedChartInstance.update('none')
       }
     }
 
@@ -502,14 +703,13 @@ export default {
     onMounted(async () => {
       await fetchHostData()
       await createCharts()
-      // Connect to WebSocket for real-time updates instead of polling
-      await systemStore.connectToSystemDetailWebSocket(props.hostname)
+      // Start auto-refresh polling for this host (2 minutes like dashboard)
+      systemStore.startHostDetailAutoRefresh(props.hostname, 120000)
     })
 
     onUnmounted(() => {
       systemStore.stopAutoRefresh()
       systemStore.clearHostData()
-      systemStore.disconnectWebSockets()
       destroyCharts()
     })
 
@@ -519,6 +719,8 @@ export default {
       
       // Data
       hours,
+      zoomLevels,
+      currentZoomLevel,
       
       // Refs
       combinedChart,
@@ -533,8 +735,10 @@ export default {
       getCpuClass,
       getMemoryClass,
       formatDateTime,
+      formatTimestamp,
       updateTimeRange,
       refreshData,
+      setZoomLevel,
       resetZoom
     }
   }

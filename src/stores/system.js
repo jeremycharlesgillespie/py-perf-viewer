@@ -181,6 +181,12 @@ export const useSystemStore = defineStore('system', {
       }, interval)
     },
 
+    // Alias for SystemDetail page auto-refresh
+    startHostDetailAutoRefresh(hostname, interval = 120000) {
+      // Use 24 hours as default time range, 2 minutes polling interval
+      this.startHostAutoRefresh(hostname, 24, interval)
+    },
+
     // Stop auto-refresh
     stopAutoRefresh() {
       if (this.refreshInterval) {

@@ -18,7 +18,7 @@
     
     <!-- Summary Cards -->
     <div class="row mb-4">
-      <div class="col-md-3">
+      <div class="col-md-6">
         <div class="card text-center">
           <div class="card-body">
             <h5 class="card-title">Total Hosts</h5>
@@ -26,29 +26,13 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title">Total Records</h5>
-            <h2 class="text-success">{{ dashboardData.total_records }}</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title">Time Range</h5>
-            <p class="mb-0">{{ hours }} hours</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
+      <div class="col-md-6">
         <div class="card text-center">
           <div class="card-body">
             <h5 class="card-title">Status</h5>
-            <p class="mb-0 text-success">
+            <h2 class="text-success">
               <i class="fas fa-check-circle"></i> Active
-            </p>
+            </h2>
           </div>
         </div>
       </div>
@@ -215,8 +199,8 @@ export default {
     // Lifecycle
     onMounted(async () => {
       await fetchData()
-      // Connect to WebSocket for real-time updates instead of polling
-      await systemStore.connectToDashboardWebSocket()
+      // Start auto-refresh polling for system monitoring updates (2 minutes)
+      systemStore.startDashboardAutoRefresh(120000)
     })
 
     onUnmounted(() => {

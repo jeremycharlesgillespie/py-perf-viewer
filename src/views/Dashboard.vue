@@ -155,8 +155,8 @@ export default {
         systemStore.fetchDashboardData()
       }, 100)
       
-      // Start auto-refresh for dashboard
-      systemStore.startDashboardAutoRefresh()
+      // Start auto-refresh for dashboard (2 minutes to match data availability)
+      systemStore.startDashboardAutoRefresh(120000)
     })
 
     onUnmounted(() => {
