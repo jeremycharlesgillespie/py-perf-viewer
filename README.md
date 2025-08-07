@@ -1,12 +1,43 @@
-# PyPerf Viewer
+# py-perf-viewer
 
-A Django web dashboard for visualizing and analyzing performance data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) library.
+A comprehensive Django web dashboard for visualizing and analyzing performance data collected by the [py-perf](https://pypi.org/project/py-perf-jg/) library.
 
-Here's what you can expect when running the py-perf-viewer dashboard:
+## Features
+
+- **Real-time System Monitoring**: Live CPU, memory, and process metrics with 1-minute updates
+- **Performance Analytics**: Function-level performance tracking and analysis
+- **Time-series Visualization**: Interactive charts with Chart.js for historical trends
+- **Optimized Data Storage**: Efficient DynamoDB queries with automatic 30-day TTL
+- **Dark/Light Themes**: Modern UI with persistent theme preferences
+- **REST API**: Programmatic access to all metrics and data
+
+## System Monitoring Dashboard
+
+The system monitoring features provide real-time insights into your infrastructure:
+
+### System Overview
+- **Host Status**: Real-time online/offline status with 6-minute timeout threshold
+- **Resource Metrics**: Live CPU and memory utilization percentages
+- **Timeline Data**: Historical performance data with 1-minute precision
+- **Auto-refresh**: Automatic updates every 2 minutes
+
+### System Detail Views
+- **Interactive Charts**: Zoom controls (1m, 5m, 15m, 1h, 6h, 24h, All)
+- **Real-time Updates**: Live data streaming with polling
+- **Memory Calculation**: Uses `(total - available) / total * 100` formula
+- **Time Formatting**: Consistent HH:mm:ss CDT format with 45-degree rotation
+
+### Data Architecture
+- **Optimized Storage**: py-perf-system-v2 table with hour-based partitioning
+- **Automatic TTL**: 30-day data retention with DynamoDB TTL
+- **Frontend-ready Format**: Pre-processed data requiring minimal computation
+- **Efficient Queries**: Hour-based partition keys for fast retrieval
+
+### Screenshots
 
 ### Main Dashboard Home (Dark Mode - Default)
 ![Main Dashboard Dark](screenshots/dark_dashboard_home.png)
-*Overview of performance metrics with key statistics and recent activity - Dark mode provides a modern, eye-friendly experience*
+*System overview with host status, resource metrics, and recent activity*
 
 ### Performance Records List (Light Mode)
 ![Performance Records Light](screenshots/light_performance_records.png)
