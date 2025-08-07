@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseNotFound, HttpResponseServerError
 from django.core.paginator import Paginator
@@ -8,6 +9,8 @@ from .models import PerformanceRecord, PerformanceMetrics
 from .system_services import system_data_service
 from .system_models import SystemDataRecord, SystemSummary
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def dashboard_home(request):
@@ -336,6 +339,22 @@ def api_system_metrics(request):
     hostname = request.GET.get('hostname')
     hours = int(request.GET.get('hours', 24))
     
+    # Try optimized service first, fall back to legacy service
+    try:
+        from .optimized_system_service import optimized_system_service
+        
+        # Test if optimized table exists
+        if optimized_system_service.test_connection():
+            if hostname:
+                metrics_data = optimized_system_service.get_system_metrics_for_hostname(hostname, hours)
+                return JsonResponse(metrics_data)
+            else:
+                dashboard_data = optimized_system_service.get_system_dashboard_data()
+                return JsonResponse(dashboard_data)
+    except Exception as e:
+        logger.warning(f"Optimized service failed, falling back to legacy: {e}")
+    
+    # Fallback to legacy service
     if hostname:
         metrics_data = system_data_service.get_system_metrics_for_hostname(hostname, hours)
         return JsonResponse(metrics_data)
