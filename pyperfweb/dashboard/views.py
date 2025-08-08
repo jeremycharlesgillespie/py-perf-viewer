@@ -369,6 +369,35 @@ def api_system_hostnames(request):
     return JsonResponse({'hostnames': hostnames})
 
 
+def api_remove_system(request):
+    """API endpoint to remove a system from the registry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        hostname = data.get('hostname')
+        
+        if not hostname:
+            return JsonResponse({'error': 'Hostname is required'}, status=400)
+        
+        # Import registry service
+        from .registry_service import system_registry_service
+        
+        # Remove the system from registry
+        success = system_registry_service.remove_system(hostname)
+        
+        if success:
+            return JsonResponse({'success': True, 'message': f'System {hostname} removed from registry'})
+        else:
+            return JsonResponse({'error': f'Failed to remove system {hostname}'}, status=500)
+            
+    except Exception as e:
+        logger.error(f"Error removing system: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def spa_view(request):
     """Serve the Vue.js Single Page Application."""
     return render(request, 'spa/index.html')
