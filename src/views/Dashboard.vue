@@ -61,10 +61,11 @@
                     <th>Current CPU</th>
                     <th>Current Memory</th>
                     <th>Last Update</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="host in systemData.hosts_summary.slice(0, 3)" :key="host.hostname">
+                  <tr v-for="host in systemData.hosts_summary.slice(0, 5)" :key="host.hostname">
                     <td>
                       <router-link :to="{ name: 'SystemDetail', params: { hostname: host.hostname } }">
                         <strong>{{ host.hostname }}</strong>
@@ -90,6 +91,25 @@
                       <small class="timestamp">
                         {{ formatTimestamp(host.last_seen) }}
                       </small>
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <router-link 
+                          :to="{ name: 'SystemDetail', params: { hostname: host.hostname } }" 
+                          class="btn btn-outline-primary"
+                          title="View details"
+                        >
+                          <i class="fas fa-chart-line"></i>
+                        </router-link>
+                        <button
+                          @click="removeSystem(host.hostname)"
+                          class="btn btn-outline-danger"
+                          :disabled="isRemoving"
+                          title="Remove from dashboard"
+                        >
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -127,6 +147,7 @@ export default {
   name: 'Dashboard',
   setup() {
     const systemStore = useSystemStore()
+    const isRemoving = ref(false)
 
     // Computed properties
     const systemData = computed(() => systemStore.dashboardData)
@@ -146,6 +167,38 @@ export default {
 
     const refreshData = async () => {
       await systemStore.refreshDashboard()
+    }
+
+    const removeSystem = async (hostname) => {
+      if (!confirm(`Are you sure you want to remove ${hostname} from the dashboard?`)) {
+        return
+      }
+      
+      isRemoving.value = true
+      try {
+        const response = await fetch('/api/system/remove/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ hostname })
+        })
+        
+        const data = await response.json()
+        
+        if (response.ok) {
+          // Refresh the dashboard data
+          await systemStore.fetchDashboardData()
+          alert(`System ${hostname} has been removed from the dashboard`)
+        } else {
+          alert(`Failed to remove system: ${data.error || 'Unknown error'}`)
+        }
+      } catch (error) {
+        console.error('Error removing system:', error)
+        alert(`Error removing system: ${error.message}`)
+      } finally {
+        isRemoving.value = false
+      }
     }
 
     // Lifecycle - defer API call to improve initial load
@@ -168,6 +221,9 @@ export default {
       // Store
       systemStore,
       
+      // Data
+      isRemoving,
+      
       // Computed
       systemData,
       
@@ -175,6 +231,7 @@ export default {
       getCpuBadgeClass,
       getMemoryBadgeClass,
       refreshData,
+      removeSystem,
       formatTimestamp
     }
   }
