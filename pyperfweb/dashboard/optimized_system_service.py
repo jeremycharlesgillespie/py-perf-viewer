@@ -11,6 +11,13 @@ from django.conf import settings
 from django.core.cache import cache
 from botocore.exceptions import ClientError
 
+try:
+    from .registry_service import system_registry_service
+    HAS_REGISTRY = True
+except ImportError:
+    HAS_REGISTRY = False
+    system_registry_service = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -196,26 +203,75 @@ class OptimizedSystemService:
     def get_system_dashboard_data(self) -> Dict[str, Any]:
         """Get dashboard overview data using optimized storage."""
         try:
-            # Get list of all hostnames (this requires scanning or maintaining a separate index)
-            hostnames = self._get_all_hostnames()
-            
-            hosts_summary = []
-            total_records = 0
-            
-            for hostname in hostnames:
-                # Get latest data point for each hostname
-                latest_data = self._get_latest_data_point(hostname)
-                if latest_data:
-                    host_summary = {
-                        'hostname': hostname,
-                        'current_cpu': latest_data.get('cpu_percent', 0),
-                        'current_memory': latest_data.get('memory_percent', 0),
-                        'last_seen': latest_data.get('timestamp', 0),
-                        'is_online': (time.time() - latest_data.get('timestamp', 0)) < 360,
-                        'first_seen': self._get_first_seen_timestamp(hostname)
-                    }
+            # If registry is available, use it for the system list
+            if HAS_REGISTRY and system_registry_service:
+                # Get all systems from registry
+                registry_systems = system_registry_service.get_all_systems()
+                
+                hosts_summary = []
+                total_records = 0
+                
+                for system in registry_systems:
+                    hostname = system['hostname']
+                    
+                    # Get latest data point from v2 table
+                    latest_data = self._get_latest_data_point(hostname)
+                    
+                    if latest_data:
+                        # Use fresh data from v2 table
+                        host_summary = {
+                            'hostname': hostname,
+                            'current_cpu': latest_data.get('cpu_percent', 0),
+                            'current_memory': latest_data.get('memory_percent', 0),
+                            'last_seen': latest_data.get('timestamp', 0),
+                            'is_online': (time.time() - latest_data.get('timestamp', 0)) < 360,
+                            'first_seen': system.get('first_seen', self._get_first_seen_timestamp(hostname)),
+                            'platform': system.get('platform', 'Unknown'),
+                            'status': system.get('status', 'unknown'),
+                            'registry_last_seen': system.get('last_seen', 0)
+                        }
+                    else:
+                        # No recent data in v2 table, use registry info
+                        host_summary = {
+                            'hostname': hostname,
+                            'current_cpu': system.get('cpu_percent', 0),
+                            'current_memory': system.get('memory_percent', 0),
+                            'last_seen': system.get('last_seen', 0),
+                            'is_online': system.get('status') == 'online',
+                            'first_seen': system.get('first_seen', None),
+                            'platform': system.get('platform', 'Unknown'),
+                            'status': system.get('status', 'unknown'),
+                            'registry_last_seen': system.get('last_seen', 0)
+                        }
+                    
                     hosts_summary.append(host_summary)
                     total_records += 1
+                
+                logger.info(f"Using registry: found {len(registry_systems)} systems")
+                
+            else:
+                # Fallback to scanning for hostnames
+                hostnames = self._get_all_hostnames()
+                
+                hosts_summary = []
+                total_records = 0
+                
+                for hostname in hostnames:
+                    # Get latest data point for each hostname
+                    latest_data = self._get_latest_data_point(hostname)
+                    if latest_data:
+                        host_summary = {
+                            'hostname': hostname,
+                            'current_cpu': latest_data.get('cpu_percent', 0),
+                            'current_memory': latest_data.get('memory_percent', 0),
+                            'last_seen': latest_data.get('timestamp', 0),
+                            'is_online': (time.time() - latest_data.get('timestamp', 0)) < 360,
+                            'first_seen': self._get_first_seen_timestamp(hostname),
+                            'platform': 'Unknown',
+                            'status': 'online' if (time.time() - latest_data.get('timestamp', 0)) < 360 else 'offline'
+                        }
+                        hosts_summary.append(host_summary)
+                        total_records += 1
             
             # Sort by last seen
             hosts_summary.sort(key=lambda x: x.get('last_seen', 0), reverse=True)
