@@ -3,9 +3,6 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
-          <router-link to="/">Dashboard</router-link>
-        </li>
-        <li class="breadcrumb-item">
           <router-link to="/system">System Metrics</router-link>
         </li>
         <li class="breadcrumb-item active">{{ hostname }}</li>
@@ -96,8 +93,8 @@
                   >
                     {{ level.label }}
                   </button>
-                  <button class="btn btn-sm btn-outline-secondary" @click="resetZoom('combined')" title="Show all data">
-                    <i class="fas fa-expand"></i> All
+                  <button class="btn btn-sm btn-outline-secondary" @click="resetZoom('combined')" title="Show last 7 days">
+                    7 days
                   </button>
                 </div>
               </div>
@@ -119,20 +116,9 @@
 
     </div>
 
-    <!-- Time Range Filter -->
-    <div class="mt-4">
-      <form @submit.prevent="updateTimeRange" class="d-flex align-items-center gap-2">
-        <label for="hours" class="form-label mb-0">Time Range:</label>
-        <select v-model="hours" id="hours" class="form-select" style="max-width: 200px;">
-          <option value="1">Last 1 hour</option>
-          <option value="6">Last 6 hours</option>
-          <option value="24">Last 24 hours</option>
-          <option value="48">Last 48 hours</option>
-          <option value="168">Last 7 days</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Update</button>
-        <router-link to="/system" class="btn btn-secondary ms-2">Back to Overview</router-link>
-      </form>
+    <!-- Navigation -->
+    <div class="mt-4 text-center">
+      <router-link to="/system" class="btn btn-secondary">Back to Overview</router-link>
     </div>
   </div>
 </template>
@@ -184,7 +170,7 @@ export default {
   setup(props) {
     const route = useRoute()
     const systemStore = useSystemStore()
-    const hours = ref(parseInt(route.query.hours) || 24)
+    const hours = 24 // Fixed at 24 hours since we're using zoom controls
     
     // Chart references
     const combinedChart = ref(null)
@@ -192,14 +178,10 @@ export default {
     
     // Zoom levels configuration
     const zoomLevels = [
-      { label: '1m', minutes: 1, ticks: 'second', unit: 'second', stepSize: 10, maxTicksLimit: 7 },
-      { label: '5m', minutes: 5, ticks: 'minute', unit: 'minute', stepSize: 1 },
       { label: '10m', minutes: 10, ticks: 'minute', unit: 'minute', stepSize: 2 },
       { label: '30m', minutes: 30, ticks: 'minute', unit: 'minute', stepSize: 5 },
       { label: '1h', minutes: 60, ticks: 'minute', unit: 'minute', stepSize: 10 },
-      { label: '2h', minutes: 120, ticks: 'hour', unit: 'hour', stepSize: 1 },
       { label: '4h', minutes: 240, ticks: 'hour', unit: 'hour', stepSize: 1 },
-      { label: '12h', minutes: 720, ticks: 'hour', unit: 'hour', stepSize: 2 },
       { label: '24h', minutes: 1440, ticks: 'hour', unit: 'hour', stepSize: 4 }
     ]
     
@@ -259,26 +241,13 @@ export default {
       }).format(date)
     }
 
-    const updateTimeRange = async () => {
-      console.log('Time range changed to:', hours.value, 'hours')
-      
-      // Destroy existing chart to ensure clean state
-      destroyCharts()
-      
-      // Fetch new data
-      await fetchHostData()
-      
-      // Recreate chart with new data
-      await nextTick()
-      await createCharts()
-    }
 
     const fetchHostData = async () => {
-      await systemStore.fetchHostMetrics(props.hostname, hours.value)
+      await systemStore.fetchHostMetrics(props.hostname, hours)
     }
 
     const refreshData = async () => {
-      await systemStore.refreshHostMetrics(props.hostname, hours.value)
+      await systemStore.refreshHostMetrics(props.hostname, hours)
       // Update charts after data refresh
       await nextTick()
       updateCharts()
@@ -418,6 +387,11 @@ export default {
               mode: 'index',
               intersect: false,
               callbacks: {
+                title: function(context) {
+                  // Format timestamp to match "Last Update" format
+                  const timestamp = context[0].parsed.x
+                  return formatTimestamp(timestamp / 1000) // Convert milliseconds to seconds
+                },
                 label: function(context) {
                   return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
                 }
@@ -508,14 +482,11 @@ export default {
         
         // Auto-scroll to show newest data if no specific zoom level is set
         if (!currentZoomLevel.value && cpuData.length > 0) {
-          const latestTime = Math.max(...cpuData.map(point => point.x.getTime()))
-          const timeWindow = 30 * 60 * 1000 // Show last 30 minutes by default
-          const earliestTime = latestTime - timeWindow
-          
-          // Update the visible range to show the newest data
-          combinedChartInstance.options.scales.x.min = earliestTime
-          combinedChartInstance.options.scales.x.max = latestTime
-          console.log(`Auto-scrolled to show newest data: ${new Date(latestTime).toISOString()}`)
+          // Set default zoom level to 1h
+          const oneHourLevel = zoomLevels.find(level => level.label === '1h')
+          if (oneHourLevel) {
+            setZoomLevel(oneHourLevel)
+          }
         }
         
         combinedChartInstance.update('active')
@@ -691,13 +662,6 @@ export default {
       updateCharts()
     }, { deep: true })
 
-    // Watch for hours change to trigger data refresh
-    watch(hours, async (newHours, oldHours) => {
-      if (oldHours !== undefined) { // Avoid initial trigger
-        console.log('Hours changed from', oldHours, 'to', newHours)
-        await updateTimeRange()
-      }
-    })
 
     // Lifecycle
     onMounted(async () => {
@@ -718,7 +682,6 @@ export default {
       systemStore,
       
       // Data
-      hours,
       zoomLevels,
       currentZoomLevel,
       
@@ -736,7 +699,6 @@ export default {
       getMemoryClass,
       formatDateTime,
       formatTimestamp,
-      updateTimeRange,
       refreshData,
       setZoomLevel,
       resetZoom
