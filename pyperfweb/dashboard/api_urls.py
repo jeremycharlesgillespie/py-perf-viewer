@@ -14,4 +14,5 @@ urlpatterns = [
     # System API endpoints
     path('system/', views.api_system_metrics, name='system_metrics'),
     path('system/hostnames/', views.api_system_hostnames, name='system_hostnames'),
+    path('system/remove/', views.api_remove_system, name='remove_system'),
 ]
