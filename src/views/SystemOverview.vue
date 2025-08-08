@@ -113,12 +113,23 @@
                   </small>
                 </td>
                 <td>
-                  <router-link 
-                    :to="{ name: 'SystemDetail', params: { hostname: host.hostname } }" 
-                    class="btn btn-sm btn-primary"
-                  >
-                    <i class="fas fa-chart-line"></i> Investigate
-                  </router-link>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <router-link 
+                      :to="{ name: 'SystemDetail', params: { hostname: host.hostname } }" 
+                      class="btn btn-outline-primary"
+                      title="View details"
+                    >
+                      <i class="fas fa-chart-line"></i>
+                    </router-link>
+                    <button
+                      @click="removeSystem(host.hostname)"
+                      class="btn btn-outline-danger"
+                      :disabled="isRemoving"
+                      title="Remove from dashboard"
+                    >
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -132,20 +143,6 @@
       </div>
     </div>
 
-    <!-- Time Range Filter -->
-    <div class="mt-4">
-      <form @submit.prevent="updateTimeRange" class="d-flex align-items-center gap-2">
-        <label for="hours" class="form-label mb-0">Time Range:</label>
-        <select v-model="hours" id="hours" class="form-select" style="max-width: 200px;">
-          <option value="1">Last 1 hour</option>
-          <option value="6">Last 6 hours</option>
-          <option value="24">Last 24 hours</option>
-          <option value="48">Last 48 hours</option>
-          <option value="168">Last 7 days</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Update</button>
-      </form>
-    </div>
   </div>
 </template>
 
@@ -158,7 +155,7 @@ export default {
   name: 'SystemOverview',
   setup() {
     const systemStore = useSystemStore()
-    const hours = ref(24)
+    const isRemoving = ref(false)
 
     // Computed properties
     const dashboardData = computed(() => systemStore.dashboardData)
@@ -184,9 +181,6 @@ export default {
       return typeof lastSeen === 'number' ? lastSeen : 0
     }
 
-    const updateTimeRange = () => {
-      fetchData()
-    }
 
     const refreshData = async () => {
       await systemStore.refreshDashboard()
@@ -194,6 +188,38 @@ export default {
 
     const fetchData = async () => {
       await systemStore.fetchDashboardData()
+    }
+
+    const removeSystem = async (hostname) => {
+      if (!confirm(`Are you sure you want to remove ${hostname} from the dashboard?`)) {
+        return
+      }
+      
+      isRemoving.value = true
+      try {
+        const response = await fetch('/api/system/remove/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ hostname })
+        })
+        
+        const data = await response.json()
+        
+        if (response.ok) {
+          // Refresh the dashboard data
+          await systemStore.fetchDashboardData()
+          alert(`System ${hostname} has been removed from the dashboard`)
+        } else {
+          alert(`Failed to remove system: ${data.error || 'Unknown error'}`)
+        }
+      } catch (error) {
+        console.error('Error removing system:', error)
+        alert(`Error removing system: ${error.message}`)
+      } finally {
+        isRemoving.value = false
+      }
     }
 
     // Lifecycle
@@ -213,7 +239,7 @@ export default {
       systemStore,
       
       // Data
-      hours,
+      isRemoving,
       
       // Computed
       dashboardData,
@@ -224,8 +250,8 @@ export default {
       getCpuBadgeClass,
       getMemoryBadgeClass,
       getTimestamp,
-      updateTimeRange,
       refreshData,
+      removeSystem,
       formatTimestamp,
       formatDate
     }
