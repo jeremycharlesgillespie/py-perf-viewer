@@ -19,11 +19,6 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
-              <router-link class="nav-link" to="/" exact-active-class="active">
-                <i class="fas fa-home"></i> Dashboard
-              </router-link>
-            </li>
-            <li class="nav-item">
               <router-link class="nav-link" to="/system" active-class="active">
                 <i class="fas fa-server"></i> System Metrics
               </router-link>
