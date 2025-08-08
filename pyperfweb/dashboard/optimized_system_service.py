@@ -225,7 +225,7 @@ class OptimizedSystemService:
                             'current_memory': latest_data.get('memory_percent', 0),
                             'last_seen': latest_data.get('timestamp', 0),
                             'is_online': (time.time() - latest_data.get('timestamp', 0)) < 360,
-                            'first_seen': system.get('first_seen', self._get_first_seen_timestamp(hostname)),
+                            'first_seen': system.get('first_seen'),
                             'platform': system.get('platform', 'Unknown'),
                             'status': system.get('status', 'unknown'),
                             'registry_last_seen': system.get('last_seen', 0)
