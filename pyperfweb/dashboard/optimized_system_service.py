@@ -73,7 +73,7 @@ class OptimizedSystemService:
                 'max_cpu': max(cpu_values) if cpu_values else 0,
                 'max_memory': max(memory_values) if memory_values else 0,
                 'last_seen': latest_point.get('timestamp', 0),
-                'first_seen': self._get_first_seen_timestamp(hostname),
+                'first_seen': self._get_first_seen_from_registry(hostname),
                 'is_online': (time.time() - latest_point.get('timestamp', 0)) < 360,  # 6 minutes
                 'timeline_data': timeline_data
             }
@@ -200,6 +200,27 @@ class OptimizedSystemService:
             logger.error(f"Failed to get first seen timestamp for {hostname}: {e}")
             return None
     
+    def _get_first_seen_from_registry(self, hostname: str) -> Optional[float]:
+        """Get first_seen timestamp from registry service (fast)."""
+        try:
+            if HAS_REGISTRY and system_registry_service:
+                system_info = system_registry_service.get_system_info(hostname)
+                if system_info:
+                    return system_info.get('first_seen')
+            
+            # Fallback: try to get from cache first
+            cache_key = f"first_seen_v2_{hostname}"
+            cached_timestamp = cache.get(cache_key)
+            if cached_timestamp is not None:
+                return cached_timestamp
+                
+            logger.warning(f"No registry data or cache for {hostname}, first_seen will be None")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to get first_seen from registry for {hostname}: {e}")
+            return None
+    
     def get_system_dashboard_data(self) -> Dict[str, Any]:
         """Get dashboard overview data using optimized storage."""
         try:
@@ -266,7 +287,7 @@ class OptimizedSystemService:
                             'current_memory': latest_data.get('memory_percent', 0),
                             'last_seen': latest_data.get('timestamp', 0),
                             'is_online': (time.time() - latest_data.get('timestamp', 0)) < 360,
-                            'first_seen': self._get_first_seen_timestamp(hostname),
+                            'first_seen': self._get_first_seen_from_registry(hostname),
                             'platform': 'Unknown',
                             'status': 'online' if (time.time() - latest_data.get('timestamp', 0)) < 360 else 'offline'
                         }
