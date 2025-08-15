@@ -174,9 +174,15 @@ export const useSystemStore = defineStore('system', {
     startHostAutoRefresh(hostname, hours = 24, interval = 60000) {
       this.stopAutoRefresh() // Clear any existing interval
       
-      this.refreshInterval = setInterval(() => {
-        if (this.currentHost === hostname) {
-          this.fetchHostMetrics(hostname, hours)
+      console.log(`Starting auto-refresh for host ${hostname} every ${interval}ms`)
+      
+      this.refreshInterval = setInterval(async () => {
+        try {
+          console.log(`Auto-refreshing host metrics for ${hostname}`)
+          await this.fetchHostMetrics(hostname, hours)
+          console.log(`Auto-refresh completed for ${hostname}`)
+        } catch (error) {
+          console.error(`Auto-refresh failed for ${hostname}:`, error)
         }
       }, interval)
     },

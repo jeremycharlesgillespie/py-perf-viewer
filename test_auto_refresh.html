@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auto-Refresh</title>
+</head>
+<body>
+    <h1>System Detail Auto-Refresh Test</h1>
+    <div id="last-seen">Loading...</div>
+    <div id="log"></div>
+
+    <script>
+        let count = 0;
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            document.getElementById('log').innerHTML += `<p>${timestamp}: ${message}</p>`;
+        }
+        
+        async function fetchSystemData() {
+            try {
+                count++;
+                log(`Fetch attempt #${count}`);
+                
+                const response = await fetch('http://localhost:8000/api/system/?hostname=Mac.home.local&hours=24');
+                const data = await response.json();
+                
+                const lastSeen = new Date(data.last_seen * 1000).toLocaleString();
+                document.getElementById('last-seen').textContent = `Last Seen: ${lastSeen} (${data.last_seen})`;
+                
+                log(`Success: last_seen = ${data.last_seen}`);
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        }
+        
+        // Initial fetch
+        fetchSystemData();
+        
+        // Auto-refresh every 30 seconds (for testing)
+        setInterval(fetchSystemData, 30000);
+        
+        log('Auto-refresh test started (30 second intervals)');
+    </script>
+</body>
+</html>

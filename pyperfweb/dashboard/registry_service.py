@@ -1,5 +1,16 @@
 """
 Service for managing the persistent systems registry.
+
+HOSTNAME DUPLICATE PREVENTION:
+Always use py_perf.hostname_utils.get_normalized_hostname() when working with hostnames
+to prevent duplicate entries for the same machine with different hostname formats.
+
+Common causes of duplicates:
+- Using raw socket.gethostname() instead of normalized version
+- Network configuration changes (DHCP/static, domain changes)
+- OS hostname changes during setup or reconfiguration
+
+If duplicates are detected, use remove_system() to mark stale entries as inactive.
 """
 
 import boto3

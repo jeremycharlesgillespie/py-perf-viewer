@@ -665,10 +665,13 @@ export default {
 
     // Lifecycle
     onMounted(async () => {
+      console.log(`SystemDetail mounted for hostname: ${props.hostname}`)
       await fetchHostData()
       await createCharts()
       // Start auto-refresh polling for this host (2 minutes like dashboard)
+      console.log(`Starting auto-refresh for hostname: ${props.hostname}`)
       systemStore.startHostDetailAutoRefresh(props.hostname, 120000)
+      console.log(`Auto-refresh started for hostname: ${props.hostname}`)
     })
 
     onUnmounted(() => {

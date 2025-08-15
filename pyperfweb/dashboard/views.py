@@ -365,6 +365,19 @@ def api_system_metrics(request):
 
 def api_system_hostnames(request):
     """API endpoint for system hostnames."""
+    # Try optimized service first, fall back to legacy service
+    try:
+        from .optimized_system_service import optimized_system_service
+        
+        # Test if optimized table exists
+        if optimized_system_service.test_connection():
+            dashboard_data = optimized_system_service.get_system_dashboard_data()
+            hostnames = [host['hostname'] for host in dashboard_data.get('hosts_summary', [])]
+            return JsonResponse({'hostnames': hostnames})
+    except Exception as e:
+        logger.warning(f"Optimized service failed for hostnames, falling back to legacy: {e}")
+    
+    # Fallback to legacy service
     hostnames = system_data_service.get_system_hostnames()
     return JsonResponse({'hostnames': hostnames})
 

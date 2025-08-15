@@ -82,6 +82,9 @@ print(f'Found {len(recent)} records')
 
 # Check latest DynamoDB record
 aws dynamodb scan --table-name py-perf-system --limit 1 --output json | jq '.Items[0].timestamp.N'
+
+# Check for hostname duplicates (IMPORTANT for dashboard accuracy)
+.venv/bin/python ../scripts/check_hostname_duplicates.py
 ```
 
 ### Virtual Environments

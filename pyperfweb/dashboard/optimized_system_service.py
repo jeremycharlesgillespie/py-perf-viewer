@@ -88,9 +88,10 @@ class OptimizedSystemService:
             current_time = time.time()
             start_time = current_time - (hours * 3600)
             
-            # Generate list of hour partitions to query
-            start_dt = datetime.fromtimestamp(start_time)
-            current_dt = datetime.fromtimestamp(current_time)
+            # Generate list of hour partitions to query (use UTC to match daemon)
+            from datetime import timezone
+            start_dt = datetime.fromtimestamp(start_time, tz=timezone.utc)
+            current_dt = datetime.fromtimestamp(current_time, tz=timezone.utc)
             
             all_records = []
             
